@@ -80,11 +80,11 @@ class Racer {
         void unlockParts(bool unlock);
         bool arePartsUnlocked();
 
-        void racerStats();
+        string racerStats();
 
         Items getBikePart(int category);
 
-        string bikeStats();
+        void bikeStats();
         void consumableStats();
 };
 

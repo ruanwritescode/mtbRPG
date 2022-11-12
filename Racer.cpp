@@ -138,9 +138,11 @@ vector<int> Racer::getTires() {
     return tires_;
 }
 
-void Racer::racerStats() {
-            cout << name_ << ": Strength: " << strength_ << " | Skill: " << skill_ << " | Endurance: " << endurance_ << " | Mental: " << mental_ << endl;
-        }
+string Racer::racerStats() {
+    string stats;
+    stats += name_ + ": Strength: " + to_string(strength_) + " | Skill: " + to_string(skill_) + " | Endurance: " + to_string(endurance_) + " | Mental: " + to_string(mental_) + "\n";
+    return stats;
+}
 
 Items Racer::getBikePart(int category) {
     Items part;
@@ -176,15 +178,19 @@ void Racer::unlockParts(bool unlock) {
 void Racer::consumableStats() {
     if(unlocked_consumables) {
         cout << endl;
-        cout << "Toolkits: " << toolkits_ << "/3" << endl;
-        cout << "Snacks: " << snacks_ << "/8" << endl;
+        cout << "Toolkits: " << toolkits_ << "/" << MAX_TOOLS << endl;
+        cout << "Snacks: " << snacks_ << "/" << MAX_SNACKS << endl;
     }
 }
-string Racer::bikeStats() {
-    string stats;
+void Racer::bikeStats() {
+    int width = 26;
+    string stats = "";
     if(unlocked_parts){
-        stats += "\n";
-        int width = 26;
+        stats += "Parts";
+        for(int i = 0; i < (width - 3);i++) {
+                stats += " ";
+        }
+        stats += "Health\n";
         if(frame_.getName() != "") {
             stats += frame_.getName() + ": ";
             for(int i = 0; i < (width - frame_.getName().length());i++) {
@@ -199,6 +205,9 @@ string Racer::bikeStats() {
             else {
                 stats += "[\n";
             }
+        }
+        else {
+            stats += "NO FRAME\n";
         }
         if(suspension_.getName() != "") {
             stats += suspension_.getName() + ": ";
@@ -215,6 +224,9 @@ string Racer::bikeStats() {
                 stats += "[\n";
             }
         }
+        else {
+            stats += "NO SUSPENSION\n";
+        }
         if(brakes_.getName() != "") {
             stats += brakes_.getName() + ": ";
             for(int i = 0; i < (width - brakes_.getName().length());i++) {
@@ -229,6 +241,9 @@ string Racer::bikeStats() {
             else {
                 stats += "[\n";
             }
+        }
+        else {
+            stats += "NO BRAKES\n";
         }
         if(wheels_.getName() != "") {
             stats += wheels_.getName() + ": ";
@@ -245,8 +260,11 @@ string Racer::bikeStats() {
                 stats += "[\n";
             }
         }
+        else {
+            stats += "NO WHEELS\n";
+        }
         if(tires_.size() > 0) {
-            string tire_wear = "Current Tire Health";
+            string tire_wear = "Current Tires:";
             stats += tire_wear + ": ";
             for(int i = 0; i < (width - tire_wear.length());i++) {
                 cout << " ";
@@ -262,7 +280,10 @@ string Racer::bikeStats() {
             stats += "\n";
 
         }
+        else {
+            stats += "NO TIRES\n";
+        }
     }
-    return stats;
+    cout << stats;
 }
 

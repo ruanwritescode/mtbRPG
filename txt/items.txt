@@ -6,7 +6,7 @@ Santa Cruz V10,2550,60
 
 Fox 40 / DHX2,1500,50
 Ohlins DH38 / TTX22M,1250,45
-SRAM BOXXER / Super Deluxe,1000,40
+SRAM Boxxer / Super Deluxe,1000,40
 DVO ONYX / Jade,800,35
 SR Suntour RUX38 / TRIAIR2,800,30
 

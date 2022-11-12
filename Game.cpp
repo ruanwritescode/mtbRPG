@@ -50,16 +50,19 @@ int Game::setPlayerName(string input) {
 
 void Game::printStatus(Racer racer) {
     if(player.getName() != "") {
-        player.racerStats();
+        cout << player.racerStats();
         for(int i = 0; i < 3;i++) {
             if (team_[i].getName() != "") {
-                team_[i].racerStats();
+                cout << team_[i].racerStats();
             }
         }
-        cout << endl;
-        cout <<"Bank Account $" << fixed << setprecision(2) << getMoney() << endl;
-        cout << player.bikeStats();
+        menuBox("INVENTORY");
+        cout <<"Bank Account $" << fixed << setprecision(2) << getMoney() << endl << endl;
+        player.bikeStats();
         player.consumableStats();
+        for(int j = 0;j < racer.racerStats().length();j++) {
+            cout << "-";
+        }
         cout << endl;
     }
 
@@ -75,22 +78,20 @@ void Game::shop() {
     Racer cart = player;
     int cart_tires = 0;
     double parts_tab = 0;
-    double tab = 0;
+    int tab = 0;
     double multiplier = bikeshop_.getMultiplier();
     bool exit = 0;
         cout << "Welcome to the level " << level_ << " bike shop! What are you looking for today?" << endl << endl;
     while(!exit) {
-        menuBox("Current Cart");
-        bikeshop_.displayCart(cart, player);
-        cout << endl << "Total: $" << tab << endl;
+        menuBox("Current Cart\nTotal: $" + to_string(tab));
+        bikeshop_.displayCart(cart, player, cart_tires);
         menuBox("Pick A Department\n \n1. PARTS | 2. TOOLKITS | 3. SNACKS | 0. VIEW CART/CHECKOUT");
         department = userInput(4);
         while(true) {
         // Department 1 for bike parts
             if(department == 1) {
-                menuBox("Current Cart");
-                bikeshop_.displayCart(cart, player);
-                cout << endl << "Total: $" << tab << endl;
+                menuBox("Current Cart\nTotal: $" + to_string(tab));
+                bikeshop_.displayCart(cart, player, cart_tires);
                 menuBox("Parts\n \n1. FRAMES | 2. SUSPENSION | 3. BRAKES | 4. WHEELS | 5. TIRES | 0. GO BACK");
                 category = userInput(6);
                 if(category == 0) {
@@ -130,9 +131,13 @@ void Game::shop() {
                                     cout << "Looks like you already own this item! Nothing was added to your cart." << endl;
                                 }
                                 else {
+                                    if(player.getBikePart(category).getName() != cart.getBikePart(category).getName()) {
+                                        tab -=  cart.getBikePart(category).getPrice() * multiplier;
+                                    }
                                     cout <<"Your cart has been updated to " << new_purchase.getName() << " for $" << new_purchase.getPrice() * multiplier << endl;
-                                    tab += (new_purchase.getPrice() - cart.getBikePart(category).getPrice()) * multiplier;
+                                    tab += new_purchase.getPrice() * multiplier;
                                     cart.setPurchase(new_purchase,category);
+                                    cart.unlockParts(true);
                                 }
                                 loadingScreen("Heading back to shop");
                                 break;
@@ -157,27 +162,22 @@ void Game::shop() {
                     dep_price = bikeshop_.getSnackPrice() * multiplier;
                 }
                 if(max_items > 0) {
-                    menuBox(dep_name + " - $" + to_string(dep_price) + " each \n \nHow many would you like to put in cart?\n \nMAXIMUM " + to_string(max_items));
+                    menuBox("Current Cart\nTotal: $" + to_string(tab));
+                    bikeshop_.displayCart(cart, player, cart_tires);
+                    menuBox(dep_name + " - $" + to_string(dep_price) + " each \n \nENTER AN AMOUNT TO UPDATE CART\n \nMAXIMUM " + to_string(max_items));
                     purchase = userInput(max_items + 1);
                     dep_name[0] = tolower(dep_name[0]);
-                    if(purchase == 0) {
-                        break;
+                    if(department == 2) {
+                        tab -= (cart.getToolkits() - player.getToolkits()) * dep_price;
+                        cart.setToolkits(player.getToolkits() + purchase);
                     }
-                    else {
-                        cout << "Confirm purchase of " << purchase << " " << dep_name << "(s) for $" << (double)purchase * dep_price << "?"  << endl;
-                        menuBox("1. Yes | 0. No");
-                        confirmation = userInput(2);
-                        if(confirmation) {
-                            if(department == 2) {
-                                cart.setToolkits(player.getToolkits() + purchase);
-                            }
-                            else if(department == 3) {
-                                cart.setSnacks(player.getSnacks() + purchase);
-                            }
-                            cart.unlockConsumables(true);
-                            cout << "Your cart has been updated to " << purchase << " " << dep_name << "(s) for $" << dep_price;
-                        }
+                    else if(department == 3) {
+                        tab -= (cart.getToolkits() - player.getToolkits()) * dep_price;
+                        cart.setSnacks(player.getSnacks() + purchase);
                     }
+                    tab += purchase * dep_price;
+                    cart.unlockConsumables(true);
+                    cout << "Your cart has been updated to " << purchase << " " << dep_name << "(s) for $" << dep_price;
                 }
                 else {
                     dep_name[0] = tolower(dep_name[0]);
@@ -190,23 +190,29 @@ void Game::shop() {
             }
             // Department 0 for Exiting bike shop
             if(department == 0) {
-                cout << "Here is your current cart:" << endl;
-                cout << "Confirm Purchase?" << endl;
+                menuBox("Current Cart\nTotal: $" + to_string(tab));
+                bikeshop_.displayCart(cart, player, cart_tires);
+                cout << endl << "Total: $" << tab << endl;
+                cout << endl << "Confirm Purchase?" << endl;
                 menuBox("1. Yes | 0. No");
                 exit = userInput(2);
+                if(!setMoney(tab)) {
+                    exit = 0;
+                }
                 break;
             }
         }
     }
     cart.addTires(cart_tires,money_,multiplier);
     player = cart;
+    loadingScreen("Heading back to Main Menu");
 }
 
 void Game::mainMenu() {
     bool exit = 0;
     while(!exit) {
-        menuBox("1. Open Map | 2. Find A Race | 0. Save Game");
-        int option = userInput(2);
+        menuBox("1. Open Map | 2. Enter Shop | 0. Save Game");
+        int option = userInput(3);
         if(option == 0) {
             saveGame();
         }
@@ -214,11 +220,14 @@ void Game::mainMenu() {
             openMap();
         }
         else if(option == 2) {
+            shop();
         }
     }
 }
 
 void Game::openMap() {
+    system("clear");
+    printStatus(player);
     Map map;
     if(level_ < 6) {
         map = usa;
@@ -241,8 +250,12 @@ void Game::openMap() {
             int spot = map.exploreSpace(map.getPlayerX(),map.getPlayerY());
             system("clear");
             if(spot == 1) {
-                cout << "Looks like you've found a shop";
-                int choice = userInput(2);
+                cout << "It looks like you've found a bike shop!" << endl;
+                menuBox("1. Enter | 0. Leave");
+                bool choice = userInput(2);
+                if(choice) {
+                    shop();
+                }
             }
         }
         else {
@@ -270,7 +283,8 @@ bool Game::setMoney(double moneyflow) {
         return true;
     }
     else {
-        cout << "You have run out of funds! Purchase is not possible";
+        cout << "It looks like you do not have enough funds to make this purchase!" << endl << "Please edit your cart and try again" << endl;
+        loadingScreen("Heading back to shop");
         return false;
     }
 }
@@ -296,6 +310,7 @@ void Game::loadingScreen(string direction) {
     cin.clear();
     printStatus(player);
 }
+
 int Game::continueGame() {
     return userInput(10);
 }
@@ -661,6 +676,75 @@ int Game::userInput(int choices) {
         printStatus(player);
     }
     return (int)input - 48;
+}
+
+char Game::directionInput() {
+    // code to take user input without having to press enter! Change system mode to raw and back to normal 
+    // Output prompt
+    cout << endl << "Enter A Direction To MOVE, 1 to EXPLORE, 0 to GO BACK";
+    cout << endl << "Hit ESC to RESTART GAME" << endl;
+    system("stty raw");
+    bool valid = false; 
+    bool prompt = false;
+    char input;
+    //Input Validation and line deletion so we do not print "invalid" multiple times on screen
+    while (!valid) {
+        // Get single character input
+        input = getchar();
+        if (input == 27) {
+            for(int i = 0; i < 3; i++) {
+                printf("\033[A");
+                printf("\33[2K\r");
+            }
+            system("stty cooked");
+            cout << endl << "Are you sure you want to quit? Any progress since your last save will be lost" << endl;
+            menuBox("1. Yes | 0. No");
+            system("stty raw");
+            while(input < 47 || input > 50) {
+                input = getchar();
+                if(input == 49) {
+                    system("clear");
+                    system("stty cooked");
+                    system("g++ -std=c++17 mtbRPG.cpp Racer.cpp Game.cpp Shop.cpp Map.cpp Items.cpp Minigame.cpp");
+                    system("./a.out");
+                    exit(0);
+                }
+                else if(input == 48) {
+                    prompt = false;
+                    for(int i = 0; i < 2; i++) {
+                    printf("\033[A");
+                    printf("\33[2K\r");
+                    }
+                }
+            }
+        }
+        else if ((tolower(input) == 'w' || tolower(input) == 'a' || tolower(input) == 's' || tolower(input) == 'd')) {
+            input = tolower(input);
+            break;
+        }
+        else if(input == 49 || input == 48) {
+            break;
+        }
+        if(!prompt && !valid) {
+            printf("\033[A");
+            printf("\33[2K\r");
+            printf("\033[A");
+            printf("\33[2K\r");
+            // Input validation, if incorrect, cout
+            cout << "Press w, a, s, or d to CONTINUE, 1 to EXPLORE, 0 to GO BACK";
+            printf("\033[B\r");
+            cout << "Press ESC to RESTART GAME";
+            printf("\033[B\r");
+            prompt = true;
+        }
+    }
+    cout.flush();
+    cin.clear();
+    // Reset terminal to normal mode 
+    system("clear");
+    system("stty cooked");
+    printStatus(player);
+    return input;
 }
 
 int Minigame::readfeatures(string filename) {

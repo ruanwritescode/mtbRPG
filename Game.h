@@ -56,6 +56,7 @@ class Game {
         void setCheckpoint(int);
 
         int userInput(int choices);
+        char directionInput();
 
 };
 

@@ -24,10 +24,12 @@ class Shop {
 
         double multiplier_;
 
+        double tab_;
+
     public:
         Shop();
 
-        void displayCart(Racer cart, Racer player);
+        void displayCart(Racer cart, Racer player, int cart_tires);
 
         int getSnackPrice();
         int getToolPrice();

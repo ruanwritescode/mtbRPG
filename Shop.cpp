@@ -58,8 +58,9 @@ vector<Items> Shop::displayInventory(int category) {
     return displayed;
 }
 
-void Shop::displayCart(Racer cart, Racer player) {
+void Shop::displayCart(Racer cart, Racer player, int cart_tires) {  
     for(int category = 1; category < 5;category++) {
+        int width = 13;
         Items cart_part = cart.getBikePart(category);
         Items player_part = player.getBikePart(category);
         string output = "";
@@ -75,15 +76,25 @@ void Shop::displayCart(Racer cart, Racer player) {
         else if (category == 4) {
             output += "Wheels: ";
         }
+        cout << output;
+        for(int i = 0; i < (width - output.length());i++) {
+                cout << " ";
+        } 
+        width = 30;
         if(cart_part.getName() != player_part.getName()) {
-            output += cart_part.getName();
-            cout << output << " $" << cart_part.getPrice() * multiplier_;
+            cout << cart_part.getName();
+            for(int i = 0; i < (width - cart_part.getName().length());i++) {
+                cout << " ";
+            } 
+            cout << "$" << cart_part.getPrice() * multiplier_;
         }
         else {
-            cout << output << "Empty";
+            cout << "Empty";
         }
         cout << endl;
     }
-    cout << "Tires: " << cart.getNumTires() << " $" << tire_price * multiplier_ << endl;
-    
+    cout << endl << "Tires: " << cart_tires << " $" << fixed << setprecision(0) << cart_tires * tire_price * multiplier_ << endl;
+    cout << endl << "Snacks: " << cart.getSnacks() - player.getSnacks() << " $" << fixed << setprecision(0) << (cart.getSnacks() - player.getSnacks()) * snack_price * multiplier_ << endl;
+    cout << "Tools: " <<  cart.getToolkits() - player.getToolkits() << " $" << fixed << setprecision(0) << (cart.getToolkits() - player.getToolkits()) * tool_price * multiplier_ << endl;
+
 }
