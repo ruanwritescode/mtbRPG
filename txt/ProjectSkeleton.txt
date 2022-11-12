@@ -1,0 +1,67 @@
+You are managing a mountain bike team
+
+You have team members each with a bike and parts with health values
+	1. Frame - up to 100
+	2. Suspension - up to 50
+	3. Brakes - up to 30
+	4. Wheels - up to 30
+	5. Tires - up to 5
+
+Each team member also has stats
+	1. Strength
+	2. Skill
+	4. Endurance
+	4. Mental
+	5. Points
+
+One Inventory for Player
+	Tools
+	Spare parts
+	Trail Snacks
+	Currency
+
+
+
+Investigate:
+	Chance to find a race day entry
+	Chance 
+
+Points Race: Chance for points base on stats
+Local Race:
+	Chance to increase strength/endurance/mental/skill and win money!
+	If they lose
+
+Repair: Costs money and to repair parts
+Shops: Bike shops/Sponsors/
+
+Misfortunes:
+	Crash/Injury
+	Mechanical
+	Bike stolen
+	Mental struggle
+	Team member had a season ending injury (only during race)
+	
+
+Each of the following choices takes t amount of time and influences stats. Each day only has a limited amount of time.\
+\
+1. Training Week\
+	a. Choice on activity per day\
+		i. Casual Ride\
+		ii. Gym\
+		ii. Nutrition\
+		iii. Training Ride\
+		iv. Sleep\
+2. Track Walk Day\
+	a. Hourly Activity Choice\
+		i. Pit Setup\
+		ii. Parts Maintenance\
+			1. Bike Rebuild\
+			2. Fork Service\
+			3. Bike Wash\
+		iii. Track Walk\
+		iv. Nutrition\
+		v. Sleep\
+		vi. Evening networking\
+3. Practice Day\
+4. Qualifying\
+5. Race Day}

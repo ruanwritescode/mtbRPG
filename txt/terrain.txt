@@ -1,0 +1,98 @@
+ / /       \/  __ <>     ~~   ~~ | |
+| |       ,_{__} ,__        \~~  | |   
+ \ \      (_)    |_/        ++-- | |
+  \ \       <>_/ \__,      / ~__/  )
+   \ \    /   (_) ___\    _~_~/\\__|
+    \ \   (_)__/~_<>|    ~~~ () /\~|
+Line Choice Section
+1.Rut           (Requires Time)
+2.Rock Garden   (Requires Strength)
+3.Roots         (Requires Skill)
+≤time,strength,skill
+   """"----___            
+              ""--__                    
+                    '-_            
+ --___                 \    
+       \                \   
+        |               |. 
+         |               |     
+Left Hand Corner
+1.Corner Inside     (Requires Skill)
+2.Corner Outside    (Requires Time)
+≤skill,time
+         _------""""              
+      ,-'                     
+     /                              
+    /                  ___--         
+   |                 /            
+  |                 |              
+  |                |            
+Right Hand Corner
+1.Corner Outside    (Requires Time)
+2.Corner Inside     (Requires Skill)
+≤time,skill
+           __/___________   /               
+          /              /"7                  
+         |               |/                 
+       __/____________   /                         
+      /               /"7               
+     |                |/                
+   __/_____________   /              
+  /                /"7                
+ |                 |/               
+ /                 /               
+Roller Section!
+1.Pump          (Requires Endurance)
+2.Single Double (Requires Skill)
+3.Triple        (Requires Strength)
+≤endurance,skill,strength
+ <>           ___    , ,       
+     ,    *  (___)        "   
+      .     (_____)   ;    /
+ ~        _(_______)_        .   
+     '  _(___________)_  <#       
+    ~ _(_______________)_    %    
+  * _(___________________)_       {}        
+   /                       \  +'      
+Moto Whoop Section
+Sorry, no choice here, I hope your bike is strong!
+Press a number 1-9 to see how you hold up
+≤bike
+    _____-----""""""""       
+   /   ______----------      
+   |   \                  
+   \  """""-----________   
+    """""------_______  ""\ 
+                     _|   |       
+ _____-----""""""""""   _/    
+ _____---------"""-----"   
+Switchbacks
+1.Endo Turns        (Requires Skill)
+2.Foot Down Turns   (Requires Endurance)
+≤skill,endurance
+          ,'        ,'         /   /     
+        _;________,'        ,-' ,-'    
+    __-'          '-__     /   /     
+                         .'  .'    
+    _________           /   /          
+   /        /'-_       /   /      
+_-'      _-'          /   / 
+
+1.Gap Jump      (Requires Skill)
+2.Chicken Line  (Requires Time)
+≤skill,time                                                
+           /    \                
+          /    • \ 
+         /  .     \
+        /          \
+       /       ~    \
+      /              \
+     /     ~          \
+   _/            ,     \_
+Motorway Straight
+1. Pedal (Requires Endurance)
+2. Speed tuck (Requires Time)
+≤endurance,time
+
+
+

@@ -1,0 +1,15 @@
+Bikes
+Commencal,Supreme V5,3000,100
+Trek,Session,2850,95
+Specialized,Demo,2850,95
+Atherton Bikes,AM.200,2700,90
+Pivot,Pheonix,2700,90
+Santa Cruz,V10,2550,85
+Intense,Prototype,2550,85
+Cube,Two15,2400,80
+Madison Saracen,Myst,2400,80
+Scott,Gambler,2250,75
+Mondraker,Summum,2250,75
+Canyon,Sender,1500,50
+Propain,Rage,1500,50
+GT,Fury,1500,50
