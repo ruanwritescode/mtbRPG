@@ -60,28 +60,30 @@ vector<Items> Shop::displayInventory(int category) {
 
 void Shop::displayCart(Racer cart, Racer player) {
     for(int category = 1; category < 5;category++) {
-            Items cart_part = cart.getBikePart(category);
-            Items player_part = player.getBikePart(category);
-            string output = "";
-            if(category == 1) {
-                output += "Frame: ";
-            }
-            else if (category == 2) {
-                output += "Suspension: ";
-            }
-            else if (category == 3) {
-                output += "Brakes: ";
-            }
-            else if (category == 4) {
-                output += "Wheels: ";
-            }
-            if(cart_part.getName() != player_part.getName()) {
-                output += cart_part.getName();
-                cout << output << " $" << cart_part.getPrice() << endl;
-            }
-            else {
-                cout << output << "Empty";
-            }
-            cout << endl;
+        Items cart_part = cart.getBikePart(category);
+        Items player_part = player.getBikePart(category);
+        string output = "";
+        if(category == 1) {
+            output += "Frame: ";
         }
+        else if (category == 2) {
+            output += "Suspension: ";
+        }
+        else if (category == 3) {
+            output += "Brakes: ";
+        }
+        else if (category == 4) {
+            output += "Wheels: ";
+        }
+        if(cart_part.getName() != player_part.getName()) {
+            output += cart_part.getName();
+            cout << output << " $" << cart_part.getPrice() * multiplier_;
+        }
+        else {
+            cout << output << "Empty";
+        }
+        cout << endl;
+    }
+    cout << "Tires: " << cart.getNumTires() << " $" << tire_price * multiplier_ << endl;
+    
 }

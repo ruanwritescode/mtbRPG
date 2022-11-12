@@ -88,7 +88,9 @@ void Game::shop() {
         while(true) {
         // Department 1 for bike parts
             if(department == 1) {
+                menuBox("Current Cart");
                 bikeshop_.displayCart(cart, player);
+                cout << endl << "Total: $" << tab << endl;
                 menuBox("Parts\n \n1. FRAMES | 2. SUSPENSION | 3. BRAKES | 4. WHEELS | 5. TIRES | 0. GO BACK");
                 category = userInput(6);
                 if(category == 0) {
@@ -124,9 +126,14 @@ void Game::shop() {
                             }
                             else {
                                 Items new_purchase = selection.at(purchase);
-                                cout <<"Your cart has been updated to " << new_purchase.getName() << " for $" << new_purchase.getPrice() * multiplier << endl;
-                                tab += (new_purchase.getPrice() - cart.getBikePart(category).getPrice()) * multiplier;
-                                cart.setPurchase(new_purchase,category);
+                                if(player.getBikePart(category).getName() == new_purchase.getName()) {
+                                    cout << "Looks like you already own this item! Nothing was added to your cart." << endl;
+                                }
+                                else {
+                                    cout <<"Your cart has been updated to " << new_purchase.getName() << " for $" << new_purchase.getPrice() * multiplier << endl;
+                                    tab += (new_purchase.getPrice() - cart.getBikePart(category).getPrice()) * multiplier;
+                                    cart.setPurchase(new_purchase,category);
+                                }
                                 loadingScreen("Heading back to shop");
                                 break;
                             }
@@ -269,7 +276,7 @@ bool Game::setMoney(double moneyflow) {
 }
 
 void Game::loadingScreen(string direction) {
-    double seconds = 0;
+    double seconds = .01;
     double micro_seconds = 1000000;
     double sleep_duration = seconds * micro_seconds;
     cout << endl;
