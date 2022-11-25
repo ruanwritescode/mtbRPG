@@ -49,38 +49,52 @@ int split(string input_string, char separator, string arr[], int arr_size) {
     return pieces; // Return the number of pieces
 }
 
-void menuBox(string prompt) {
-    string parts[5]; // Maximum of 5 lines for the prompt
-    int pieces = split(prompt,'\n',parts,5);
+string menuBox(string prompt, bool justification) {
+    const static int MAX_HEIGHT = 50; // Maximum number of lines for the prompt
+    string parts[MAX_HEIGHT]; 
+    int pieces = split(prompt,'\n',parts,MAX_HEIGHT);
+    if(parts[pieces-1] == "\0") {
+        pieces--;
+    }
     int width = parts[0].length();
+    string output;
     for(int k = 0; k < pieces; k++) {
         if(parts[k].length() > width) {
             width = parts[k].length();
         }
     }
-    cout << "+";
+    output += "+";
     for(int i = 0;i < width + 2;i++ ) {
-        cout << "-";
+        output += "-";
     }
-    cout << "+" << endl;
+    output += "+\n";
     for(int i = 0; i < pieces; i++) {
-        cout << "| ";
-        for(int j = 0; j < width;j++) {
-            if(j == (width/2) - (parts[i].length()/2)) {
-                cout << parts[i];
-                j += parts[i].length() - 1;
-            }
-            else {
-                cout << " ";
+        output += "| ";
+        if(justification) {
+            for(int j = 0; j < width;j++) {
+                if(j == (width/2) - (parts[i].length()/2)) {
+                    output += parts[i];
+                    j += parts[i].length() - 1;
+                }
+                else {
+                    output += " ";
+                }
             }
         }
-        cout << " |" << endl;
+        else {
+            output += parts[i];
+            for(int j = 0; j < width - parts[i].length();j++) {
+                output += " ";
+            }
+        }
+        output += " |\n";
     }
-    cout << "+";
+    output += "+";
     for(int i = 0;i < width + 2;i++ ) {
-        cout << "-";
+        output += "-";
     }
-    cout << "+" << endl;
+    output += "+";
+    return output + "\n";
 }
 
 

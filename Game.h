@@ -20,16 +20,17 @@ class Game {
         Shop bikeshop_;
 
         int level_;
-        double money_;
+        int money_;
         int checkpoint_;
 
-        vector<Minigame> tracks_;
+        vector<Minigame> races;
 
         Map usa;
         Map europe;
 
     public:
         Game();
+        void levelUP();
 
         void initializeMaps();
         int setPlayerName(string input);
@@ -40,8 +41,7 @@ class Game {
         void mainMenu();
         void openMap();
 
-        void train();
-        void ride();
+        bool ride(int required_level);
 
         double getMoney();
         bool setMoney(double moneyflow);
@@ -57,6 +57,9 @@ class Game {
 
         int userInput(int choices);
         char directionInput();
+
+        int readRaces(string filename);
+
 
 };
 

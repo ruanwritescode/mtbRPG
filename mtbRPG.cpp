@@ -14,26 +14,6 @@ using namespace std;
 //     switch (track_position) {
 //         case 1:
 //         case 41:
-//             choices = 1;
-//             cout <<
-//             "  ,--------------------------,     " << endl <<
-//             "  | Val Di Sole World Champs |      " << endl <<
-//             "  |--------------------------|      " << endl <<
-//             "  ||       /\\/\\_            ||        " << endl <<
-//             "  ||  /\\  /  \\ /\\           ||       " << endl <<
-//             "  || /  \\/    \\  /\\/\\/\\_,-, ||       " << endl <<
-//             "  ||/   /       /          \\||         " << endl <<
-//             "  ||                        ||          " << endl <<
-//             "  ||      _____________[]   ||          " << endl <<
-//             "  ||                   []   ||          " << endl <<
-//             "  ||           ___     []   ||          " << endl <<
-//             "  ||          ;,',;    []   ||          " << endl <<
-//             "  ||          ;.'.;    []   ||          " << endl <<
-//             endl <<
-//             "In the start gate..." << endl <<
-//             "3... 2... 1..." << endl <<
-//             "GO!!!" << endl;
-//             break;
 //         case 50:
 //             choices = 1;
 //             cout << "End of the ride! Time for a beer..." << endl << endl;
@@ -68,7 +48,7 @@ using namespace std;
 //                 "         ||/  \\||            %%%%%%% ======= "<< endl <<
 //                 "\\o/   o__ /    \\       \\o    ================ " << endl <<
 //                 " |   (|  / .    \\   o   |\\   ===============  " << endl <<
-//                 "/\\   /\\ /        \\ /|\\  /\\       " << endl <<\
+//                 "/\\   /\\ /        \\ /|\\  /\\       " << endl <<
 //                 "       /      ~   \\ /\\          " << endl <<
 //                 "      /            \\    (o/      " << endl <<
 //                 "o/   /    ~         \\    |    " << endl <<
@@ -96,7 +76,6 @@ using namespace std;
 //                 "2.Speed Tuck (Safe)" << endl;
 //                 usleep(sleep_duration);
 //                 animation_time--;
-
 //             }
 //             break;
 //     }
@@ -122,16 +101,10 @@ int main(){
             mtbRPG.continueGame();
             mtbRPG.shop();
         case 1:
+            mtbRPG.levelUP();
             cout << "Checkpoint!" << endl;
             mtbRPG.setCheckpoint(1);
             mtbRPG.mainMenu();
-            Minigame race;
-            cout << race.getNumFeatures();
-            cout << race.getNumRaces();
-        
-            // while(true) {
-            //     cout << "1.";
-            // }
     }
     system("clear");
 

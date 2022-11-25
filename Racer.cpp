@@ -99,6 +99,21 @@ void Racer::setPurchase(Items input, int category) {
         wheels_ = input;
     }
 }
+void Racer::removeItem(int category) {
+    Items empty_item;
+    if (category == 1) {
+        frame_ = empty_item;
+    }
+    else if (category == 2) {
+        suspension_ = empty_item;
+    }
+    else if (category == 3) {
+        brakes_ = empty_item;
+    }
+    else if (category == 4) {
+        wheels_ = empty_item;
+    }
+}
 
 int Racer::getToolkits(){return toolkits_;}
 void Racer::setToolkits(int toolkits) {
@@ -140,7 +155,7 @@ vector<int> Racer::getTires() {
 
 string Racer::racerStats() {
     string stats;
-    stats += name_ + ": Strength: " + to_string(strength_) + " | Skill: " + to_string(skill_) + " | Endurance: " + to_string(endurance_) + " | Mental: " + to_string(mental_) + "\n";
+    stats += name_ + ": Strength: " + to_string(strength_) + " | Skill: " + to_string(skill_) + " | Endurance: " + to_string(endurance_) + " | Mental: " + to_string(mental_);
     return stats;
 }
 
@@ -175,115 +190,147 @@ void Racer::unlockParts(bool unlock) {
     unlocked_parts = unlock;
 }
 
-void Racer::consumableStats() {
+string Racer::consumableStats() {
+    string output;
     if(unlocked_consumables) {
-        cout << endl;
-        cout << "Toolkits: " << toolkits_ << "/" << MAX_TOOLS << endl;
-        cout << "Snacks: " << snacks_ << "/" << MAX_SNACKS << endl;
+        output += to_string(toolkits_) + "/" + to_string(MAX_TOOLS) + " Toolkits : Snacks " + to_string(snacks_) + "/" + to_string(MAX_SNACKS) + "   ";
     }
+    return output;
 }
-void Racer::bikeStats() {
-    int width = 26;
+string Racer::bikeStats() {
+    int max_width = 28;
+    int width = max_width;
     string stats = "";
     if(unlocked_parts){
-        stats += "Parts";
-        for(int i = 0; i < (width - 3);i++) {
-                stats += " ";
-        }
-        stats += "Health\n";
+        stats += "BIKE STATS\nParts   Health\n";
         if(frame_.getName() != "") {
-            stats += frame_.getName() + ": ";
-            for(int i = 0; i < (width - frame_.getName().length());i++) {
+            for(int i = 0; i < (width - frame_.getName().length()-2);i++) {
                 stats += " ";
             }
+            stats += frame_.getName() + " : ";
             for(int i = 1;i < frame_.getQuality()/10;i++) {
                     stats += "[]";
+                    width -= 2;
             }
-            if(frame_.getQuality() % 10 < 5) {
-                stats += "[]\n";
+            if(frame_.getQuality() % 10 < 3) {
+                stats += "[]";
+                width -= 2;
             }
             else {
-                stats += "[\n";
+                stats += "[";
+                width -= 1;
             }
+            for(int j = 0; j < width;j++) {
+                stats += " ";
+            }
+            stats += "\n";
         }
         else {
             stats += "NO FRAME\n";
         }
+        width = max_width;
         if(suspension_.getName() != "") {
-            stats += suspension_.getName() + ": ";
-            for(int i = 0; i < (width - suspension_.getName().length());i++) {
+            for(int i = 0; i < (width - suspension_.getName().length() - 2);i++) {
                 stats += " ";
             }
-            for(int i = 1;i < suspension_.getQuality()/5;i++) {
+            stats += suspension_.getName() + " : ";
+            for(int i = 1;i < suspension_.getQuality()/10;i++) {
                     stats += "[]";
+                    width -= 2;
             }
-            if(suspension_.getQuality() % 5 < 2) {
-                stats += "[]\n";
+            if(suspension_.getQuality() % 10 < 3) {
+                stats += "[]";
+                width -= 2;
             }
             else {
-                stats += "[\n";
+                stats += "[";
+                width -= 1;
             }
+            for(int j = 0; j < width;j++) {
+                stats += " ";
+            }
+            stats += "\n";
         }
         else {
             stats += "NO SUSPENSION\n";
         }
+        width = max_width;
         if(brakes_.getName() != "") {
-            stats += brakes_.getName() + ": ";
-            for(int i = 0; i < (width - brakes_.getName().length());i++) {
+            for(int i = 0; i < (width - brakes_.getName().length() - 2);i++) {
                 stats += " ";
             }
-            for(int i = 1;i < brakes_.getQuality()/5;i++) {
+            stats += brakes_.getName() + " : ";
+            for(int i = 1;i < brakes_.getQuality()/10;i++) {
                     stats += "[]";
+                    width -= 2;
             }
-            if(brakes_.getQuality() % 5 < 2) {
-                stats += "[]\n";
+            if(brakes_.getQuality() % 10 < 3) {
+                stats += "[]";
+                width -= 2;
             }
             else {
-                stats += "[\n";
+                stats += "[";
+                width -= 1;
             }
+            for(int j = 0; j < width;j++) {
+                stats += " ";
+            }
+            stats += "\n";
         }
         else {
             stats += "NO BRAKES\n";
         }
+        width = max_width;
         if(wheels_.getName() != "") {
-            stats += wheels_.getName() + ": ";
-            for(int i = 0; i < (width - wheels_.getName().length());i++) {
+            for(int i = 0; i < (width - wheels_.getName().length()-2);i++) {
                 stats += " ";
             }
-            for(int i = 1;i < wheels_.getQuality()/5;i++) {
+            stats += wheels_.getName() + " : ";
+            for(int i = 1;i < wheels_.getQuality()/10;i++) {
                     stats += "[]";
+                    width -= 2;
             }
-            if(wheels_.getQuality() % 5 < 2) {
-                stats += "[]\n";
+            if(wheels_.getQuality() % 10 < 3) {
+                stats += "[]";
+                width -= 2;
             }
             else {
-                stats += "[\n";
+                stats += "[";
+                width -= 1;
             }
+            for(int j = 0; j < width;j++) {
+                stats += " ";
+            }
+            stats += "\n";
         }
         else {
             stats += "NO WHEELS\n";
         }
+        width = max_width;
         if(tires_.size() > 0) {
-            string tire_wear = "Current Tires:";
-            stats += tire_wear + ": ";
-            for(int i = 0; i < (width - tire_wear.length());i++) {
-                cout << " ";
+            string tire_wear = "Current Tires";
+            for(int i = 0; i < (width - tire_wear.length() - 2);i++) {
+                stats += " ";
             }
-            for(int i = 1;i <= tires_.at(0);i++) {
+            stats += tire_wear + " : ";
+            for(int i = 1;i <= (tires_.at(0)*2);i++) {
                 if(i % 2 == 1) {
-                    cout << "[";
+                    stats += "[";
+                    width -= 1;
                 }
                 else {
-                    cout << "]";
+                    stats += "]";
+                    width -= 1;
                 }
             }
-            stats += "\n";
-
+            for(int j = 0; j < width;j++) {
+                stats += " ";
+            }
         }
         else {
-            stats += "NO TIRES\n";
+            stats += "NO TIRES";
         }
     }
-    cout << stats;
+    return stats;
 }
 

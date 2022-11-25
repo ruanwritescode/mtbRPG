@@ -4,7 +4,7 @@ Wednesday Night Series,1
 Bootleg Enduro,1
 
 County Cup Downhill,2
-County Cup Enduro
+County Cup Enduro,2
 Cranksgiving Weekend,2
 Not A Race,2
 
@@ -19,7 +19,7 @@ US Open Killington,4
 Pro GRT,4
 IXS Downhill Cup,4
 
-World Cup Snowshoe, 5
+World Cup Snowshoe,5
 
 World Cup Andorra,6
 World Cup Leogang,6

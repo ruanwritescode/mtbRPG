@@ -29,7 +29,7 @@ class Shop {
     public:
         Shop();
 
-        void displayCart(Racer cart, Racer player, int cart_tires);
+        string cart(Racer cart, Racer player, int cart_tires);
 
         int getSnackPrice();
         int getToolPrice();

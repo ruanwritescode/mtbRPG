@@ -60,6 +60,7 @@ class Racer {
 
         bool addPurchase(Items purchased, int category, double money);
         void setPurchase(Items input, int category);
+        void removeItem(int category);
 
         int getToolkits();
         void setToolkits(int toolkits);
@@ -84,8 +85,8 @@ class Racer {
 
         Items getBikePart(int category);
 
-        void bikeStats();
-        void consumableStats();
+        string bikeStats();
+        string consumableStats();
 };
 
 #endif

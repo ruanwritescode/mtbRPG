@@ -1,3 +1,4 @@
+ \ \     .7/\,';o__[      ~~~^~~\\ | 
  / /       \/  __ <>     ~~   ~~ | |
 | |       ,_{__} ,__        \~~  | |   
  \ \      (_)    |_/        ++-- | |
@@ -8,7 +9,7 @@ Line Choice Section
 1.Rut           (Requires Time)
 2.Rock Garden   (Requires Strength)
 3.Roots         (Requires Skill)
-≤time,strength,skill
+≤,3,time,strength,skill
    """"----___            
               ""--__                    
                     '-_            
@@ -19,7 +20,7 @@ Line Choice Section
 Left Hand Corner
 1.Corner Inside     (Requires Skill)
 2.Corner Outside    (Requires Time)
-≤skill,time
+≤,2,skill,time
          _------""""              
       ,-'                     
      /                              
@@ -30,7 +31,7 @@ Left Hand Corner
 Right Hand Corner
 1.Corner Outside    (Requires Time)
 2.Corner Inside     (Requires Skill)
-≤time,skill
+≤,2,time,skill
            __/___________   /               
           /              /"7                  
          |               |/                 
@@ -45,7 +46,7 @@ Roller Section!
 1.Pump          (Requires Endurance)
 2.Single Double (Requires Skill)
 3.Triple        (Requires Strength)
-≤endurance,skill,strength
+≤,2,endurance,skill,strength
  <>           ___    , ,       
      ,    *  (___)        "   
       .     (_____)   ;    /
@@ -57,7 +58,7 @@ Roller Section!
 Moto Whoop Section
 Sorry, no choice here, I hope your bike is strong!
 Press a number 1-9 to see how you hold up
-≤bike
+≤,9,bike
     _____-----""""""""       
    /   ______----------      
    |   \                  
@@ -67,9 +68,9 @@ Press a number 1-9 to see how you hold up
  _____-----""""""""""   _/    
  _____---------"""-----"   
 Switchbacks
-1.Endo Turns        (Requires Skill)
-2.Foot Down Turns   (Requires Endurance)
-≤skill,endurance
+1.Endo Turns	(Requires Skill)
+2.Wide Turns   	(Requires Endurance)
+≤,2,skill,endurance
           ,'        ,'         /   /     
         _;________,'        ,-' ,-'    
     __-'          '-__     /   /     
@@ -80,7 +81,7 @@ _-'      _-'          /   /
 
 1.Gap Jump      (Requires Skill)
 2.Chicken Line  (Requires Time)
-≤skill,time                                                
+≤,2,skill,time                                                
            /    \                
           /    • \ 
          /  .     \
@@ -92,7 +93,7 @@ _-'      _-'          /   /
 Motorway Straight
 1. Pedal (Requires Endurance)
 2. Speed tuck (Requires Time)
-≤endurance,time
+≤,2,endurance,time
 
 
 
