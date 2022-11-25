@@ -699,7 +699,7 @@ int Map::exploreSpace(int x, int y)
             }
     }
     if(chance == 2) {
-        if(addRace(player_position_[0],player_position_[y])) {
+        if(addRace(player_position_[0],player_position_[1])) {
             return 2;
         }
     }

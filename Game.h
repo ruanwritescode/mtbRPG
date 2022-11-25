@@ -30,7 +30,7 @@ class Game {
 
     public:
         Game();
-        void levelUP();
+        bool levelUP();
 
         void initializeMaps();
         int setPlayerName(string input);

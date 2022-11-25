@@ -40,14 +40,18 @@ Game::Game() {
     }
 }
 
-void Game::levelUP() {
-    for(int i = 0; i < races.size();i++) {
-        if(races.at(i).getLength() == level_) {
-            races.erase(races.begin() + i - 1);
+bool Game::levelUP() {
+    int old_level = level_;
+    level_ = player.getPoints() / 200;
+    if (old_level == level_) {return false;}
+    else{
+        for(int i = 0; i < races.size();i++) {
+            if(races.at(i).getLevel() < level_) {
+                races.erase(races.begin() + i);
+            }
         }
+        return true;
     }
-    level_++;
-
 }
 void Game::initializeMaps() {
     usa = Map("usa");
@@ -69,8 +73,8 @@ void Game::printStatus(Racer racer) {
             }
         }
         status = menuBox(status,1);
-        status += menuBox("INVENTORY",1);
-        status += "Bank Account $" + to_string((int)getMoney()) + "\n";
+        status += "Points  " + to_string(player.getPoints()) + "\n" + menuBox("INVENTORY",1);
+        status += "Bank Account  $" + to_string((int)getMoney()) + "\n";
         if(player.arePartsUnlocked()) {
             status += menuBox(player.bikeStats(),1);
         }
@@ -275,6 +279,8 @@ void Game::openMap() {
         map = europe;
         final_level = 7;
     }
+    int x = map.getPlayerX();
+    int y = map.getPlayerY();
     while(true) {
         char direction;
         // cout << "On a shop space? ..." << map.isShopLocation(map.getPlayerX(), map.getPlayerY()) << endl;
@@ -300,11 +306,22 @@ void Game::openMap() {
                     shop();
                 }
             }
+            if(spot == 2) {
+                if(level_ != 0) {
+                    cout << "There is a race happening at this location now! Would you like to join?" << endl;
+                    cout << menuBox("1. Enter Race | 0. Skip",1);
+                    bool choice = userInput(2);
+                    if(choice) {
+                        ride(level_);
+                    }
+                }
+                map.removeRace(x,y);
+            }
         }
         else {
             map.move(direction);
-            int x = map.getPlayerX();
-            int y = map.getPlayerY();
+            x = map.getPlayerX();
+            y = map.getPlayerY();
             if(map.isShopLocation(x,y)) {
                 cout << "It looks like there's a bike shop here!\n\nWould you like to go in?\n" << endl;
                 cout << menuBox("1. Enter | 0. Skip",1);
@@ -315,7 +332,7 @@ void Game::openMap() {
                 }
             }
             if(map.isRaceLocation(x,y)) {
-                ride(level_);
+                ride(level_ + 1);
             }
             if(map.isFinalRace(x,y)) {
                 if(level_ == final_level){
@@ -346,12 +363,13 @@ bool Game::ride(int required_level) {
     */
     vector <int> available_races;;
     for(int i = 0; i < races.size();i++) {
-        if(races.at(i).getLevel() != level_+required_level) {
+        if(races.at(i).getLevel() == required_level) {
             available_races.push_back(i);
             break;
         }
     }
     if(available_races.size() == 0) {
+        level_++;
         return false; // If there are no more races left for the current level.
     }
     int race_num = rand() % available_races.size();
