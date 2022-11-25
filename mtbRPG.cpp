@@ -101,7 +101,6 @@ int main(){
             mtbRPG.continueGame();
             mtbRPG.shop();
         case 1:
-            mtbRPG.levelUP();
             cout << "Checkpoint!" << endl;
             mtbRPG.setCheckpoint(1);
             mtbRPG.mainMenu();
