@@ -315,12 +315,7 @@ void Game::openMap() {
                 }
             }
             if(map.isRaceLocation(x,y)) {
-                if(!ride(level_)) {
-                    // cout << "Looks like you're not ready for this race" << endl;
-                }
-                else if(level_ == 0) {
-
-                }
+                ride(level_);
             }
             if(map.isFinalRace(x,y)) {
                 if(level_ == final_level){
