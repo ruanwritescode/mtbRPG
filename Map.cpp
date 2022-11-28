@@ -692,11 +692,16 @@ int Map::exploreSpace(int x, int y)
             return 1;
         }
     }
-    int chance = rand() % 2;
+    int chance = rand() % 4;
     if(chance == 1) {
             if(addShop(player_position_[0],player_position_[1],true)) {
                 return 1;
             }
+    }
+    if(chance == 2) {
+        if(addRace(player_position_[0],player_position_[1])) {
+            return 2;
+        }
     }
     if (isFreeSpace(x, y))
     {

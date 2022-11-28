@@ -4,22 +4,22 @@ Wednesday Night Series,1
 Bootleg Enduro,1
 
 County Cup Downhill,2
-County Cup Enduro
+County Cup Enduro,2
 Cranksgiving Weekend,2
 Not A Race,2
 
 State Championship Downhill,3
 State Championship Enduro,3
 Big Mountain Enduro,3
-Downhill Rockies,3
+Downhill Regionals,3
 MAXXIS Enduro Series,3
 
-National Championship Trestle,4
-US Open Killington,4
+National Championship Downhill,4
+US Open Enduro,4
 Pro GRT,4
 IXS Downhill Cup,4
 
-World Cup Snowshoe, 5
+World Cup Snowshoe,5
 
 World Cup Andorra,6
 World Cup Leogang,6

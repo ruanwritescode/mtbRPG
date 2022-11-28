@@ -9,17 +9,18 @@ class Items {
     private:
         string name_;
         double price_;
-        int quality;
+        int quality_;
 
     public:
         Items();
         Items(string input_name,double input_cost,int input_health);
 
-        void displayItem(double multiplier);
+        string displayItem(double multiplier);
 
         string getName();
         double getPrice();
         int getQuality();
+        int addQuality(int change);
 };
 
 #endif

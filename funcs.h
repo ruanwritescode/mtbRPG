@@ -49,110 +49,63 @@ int split(string input_string, char separator, string arr[], int arr_size) {
     return pieces; // Return the number of pieces
 }
 
-void menuBox(string prompt) {
-    string parts[5]; // Maximum of 5 lines for the prompt
-    int pieces = split(prompt,'\n',parts,5);
+string menuBox(string prompt, bool justification) {
+    const static int MAX_HEIGHT = 50; // Maximum number of lines for the prompt
+    string parts[MAX_HEIGHT]; 
+    int pieces = split(prompt,'\n',parts,MAX_HEIGHT);
+    if(parts[pieces-1] == "\0") {
+        pieces--;
+    }
     int width = parts[0].length();
+    string output;
     for(int k = 0; k < pieces; k++) {
         if(parts[k].length() > width) {
             width = parts[k].length();
         }
     }
-    cout << "+";
+    output += "+";
     for(int i = 0;i < width + 2;i++ ) {
-        cout << "-";
+        output += "-";
     }
-    cout << "+" << endl;
+    output += "+\n";
     for(int i = 0; i < pieces; i++) {
-        cout << "| ";
-        for(int j = 0; j < width;j++) {
-            if(j == (width/2) - (parts[i].length()/2)) {
-                cout << parts[i];
-                j += parts[i].length() - 1;
+        if(parts[i] == " ") {
+            output += "+-";
+            for(int j = 0; j < width;j++) {
+                output += "-";
             }
-            else {
-                cout << " ";
-            }
+            output += "-+\n";
         }
-        cout << " |" << endl;
-    }
-    cout << "+";
-    for(int i = 0;i < width + 2;i++ ) {
-        cout << "-";
-    }
-    cout << "+" << endl;
-}
-
-char directionInput() {
-    // code to take user input without having to press enter! Change system mode to raw and back to normal 
-    // Output prompt
-    cout << endl << "Enter A Direction To MOVE, 1 to EXPLORE, 0 to GO BACK";
-    cout << endl << "Hit ESC to RESTART GAME" << endl;
-    system("stty raw");
-    bool valid = false; 
-    bool prompt = false;
-    char input;
-    //Input Validation and line deletion so we do not print "invalid" multiple times on screen
-    while (!valid) {
-        // Get single character input
-        input = getchar();
-        if (input == 27) {
-            for(int i = 0; i < 3; i++) {
-                printf("\033[A");
-                printf("\33[2K\r");
-            }
-            system("stty cooked");
-            cout << endl << "Are you sure you want to quit? Any progress since your last save will be lost" << endl;
-            menuBox("1. Yes | 0. No");
-            system("stty raw");
-            while(input < 47 || input > 50) {
-                input = getchar();
-                if(input == 49) {
-                    system("clear");
-                    system("stty cooked");
-                    system("g++ -std=c++17 mtbRPG.cpp Racer.cpp Game.cpp Shop.cpp Map.cpp Items.cpp Minigame.cpp");
-                    system("./a.out");
-                    exit(0);
-                }
-                else if(input == 48) {
-                    prompt = false;
-                    for(int i = 0; i < 2; i++) {
-                    printf("\033[A");
-                    printf("\33[2K\r");
+        else {
+            output += "| ";
+            if(justification) {
+                for(int j = 0; j < width;j++) {
+                    if(j == (width/2) - (parts[i].length()/2)) {
+                        output += parts[i];
+                        j += parts[i].length() - 1;
+                    }
+                    else {
+                        output += " ";
                     }
                 }
             }
-        }
-        else if ((tolower(input) == 'w' || tolower(input) == 'a' || tolower(input) == 's' || tolower(input) == 'd')) {
-            input = tolower(input);
-            break;
-        }
-        else if(input == 49 || input == 48) {
-            break;
-        }
-        if(!prompt && !valid) {
-            printf("\033[A");
-            printf("\33[2K\r");
-            printf("\033[A");
-            printf("\33[2K\r");
-            // Input validation, if incorrect, cout
-            cout << "Press w, a, s, or d to CONTINUE, 1 to EXPLORE, 0 to GO BACK";
-            printf("\033[B\r");
-            cout << "Press ESC to RESTART GAME";
-            printf("\033[B\r");
-            prompt = true;
+            else {
+                output += parts[i];
+                for(int j = 0; j < width - parts[i].length();j++) {
+                    output += " ";
+                }
+            }
+            output += " |\n";
         }
     }
-    cout.flush();
-    cin.clear();
-    // Reset terminal to normal mode 
-    system("clear");
-    system("stty cooked");
-    // if(player.getName() != "") {
-    //     printStatus(player);
-    // }
-    return input;
+    output += "+";
+    for(int i = 0;i < width + 2;i++ ) {
+        output += "-";
+    }
+    output += "+";
+    return output + "\n";
 }
+
 
 
 #endif

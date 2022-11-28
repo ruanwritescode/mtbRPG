@@ -16,12 +16,12 @@ private:
     static const char LOSS = 'L';       // marker for a lost race, replayable
     static const char SHOP = 'S';       // marker for Shop locations
     static const char PARTY = 'X';      // marker for party position
-    static const char FINAL = '%';      // marker for dungeon exit
+    static const char FINAL = 'F';      // marker for dungeon exit
 
     static const int max_height = 30;   // height of the map
     static const int max_width = 70;    // width of the map
     static const int max_shops_ = 60;   // max number of shops
-    static const int max_races_ = 4;    // max number of races
+    static const int max_races_ = 5;    // max number of races
 
     
 

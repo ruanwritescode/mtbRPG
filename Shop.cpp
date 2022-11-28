@@ -30,58 +30,53 @@ void Shop::changeMultiplier() {
     multiplier_ -= .05;
 }
 
-vector<Items> Shop::displayInventory(int category) {
-    string title;
-    vector<Items> displayed;
-    if (category == 1) {
-        title = "Frames:";
-        displayed = frames_;
-    }
-    if (category == 2) {
-        title = "Suspension:";
-        displayed = suspension_;
-    }
-    if (category == 3) {
-        title = "Brakes:";
-        displayed = brakes_;
-    }
-    if (category == 4) {
-        title = "Wheels:";
-        displayed = wheels_;
-    }
-    cout << title << endl;
-    for(int i = 0;i < displayed.size();i++) {
-        cout << i + 1 << ". ";
-        displayed.at(i).displayItem(multiplier_);
-    }
-    cout << endl << "PRESS 0 TO GO BACK" << endl;
-    return displayed;
-}
-
-void Shop::displayCart(Racer cart, Racer player) {
+string Shop::cart(Racer cart, Racer player, int cart_tires) {  
+    string output = "";
+    int price = 0; //For conversion from double to int for easier readability
     for(int category = 1; category < 5;category++) {
-            Items cart_part = cart.getBikePart(category);
-            Items player_part = player.getBikePart(category);
-            string output = "";
-            if(category == 1) {
-                output += "Frame: ";
-            }
-            else if (category == 2) {
-                output += "Suspension: ";
-            }
-            else if (category == 3) {
-                output += "Brakes: ";
-            }
-            else if (category == 4) {
-                output += "Wheels: ";
-            }
-            if(cart_part.getName() != player_part.getName()) {
-                output += cart_part.getName();
-                cout << output << " $" << cart_part.getPrice() << endl;
-            }
-            else {
-                cout << output << "Empty";
-            }
-            cout << endl;
+        string cat_out = "";
+        int width = 10;
+        Items cart_part = cart.getBikePart(category);
+        Items player_part = player.getBikePart(category);
+        if(category == 1) {
+            cat_out += "1. Frames: ";
         }
+        else if (category == 2) {
+            cat_out += "2. Shocks: ";
+        }
+        else if (category == 3) {
+            cat_out += "3. Brakes: ";
+        }
+        else if (category == 4) {
+            cat_out += "4. Wheels: ";
+        }
+        // for(int w = 0; w < (width - cat_out.length());w++) {
+        //         cat_out += " ";
+        // } 
+        width = 30;
+        if(cart_part.getName() != player_part.getName()) {
+            cat_out += cart_part.getName();
+            price = cart_part.getPrice() * multiplier_;
+            for(int i = 0; i < (width - cart_part.getName().length() - to_string(price).length());i++) {
+                cat_out += " ";
+            }
+            cat_out += " $" + to_string(price);
+        }
+        else {
+            cat_out += "Empty";
+            // for(int i = 0; i < (width - 3);i++) {
+            //     cat_out += " ";
+            // }
+        }
+        output += cat_out + "\n";
+    }
+    price = cart_tires * tire_price * multiplier_;
+    output += " \n5. Tires:  " + to_string(cart_tires) + " $" + to_string(price) + "\n";
+    price = (cart.getSnacks() - player.getSnacks()) * snack_price * multiplier_;
+    output += "6. Snacks: " + to_string(cart.getSnacks() - player.getSnacks()) + " $" + to_string(price) + "\n";
+    price = (cart.getToolkits() - player.getToolkits()) * tool_price * multiplier_;
+    output += "7. Tools:  " +  to_string(cart.getToolkits() - player.getToolkits()) + " $" + to_string(price);
+    output += "\n \n0. Checkout";
+    return output;
+
 }

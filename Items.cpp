@@ -5,17 +5,19 @@
 Items::Items() {
     name_   = "";
     price_  = 0.00;
-    quality = 0;
+    quality_ = 0;
 }
 
 Items::Items(string input_name,double input_cost,int input_quality) {
     name_ = input_name;
     price_ = input_cost;
-    quality = input_quality;
+    quality_ = input_quality;
 }
 
-void Items::displayItem(double multiplier) {
-    cout << name_ << " - $" << fixed << setprecision(2) << price_ * multiplier << endl;
+string Items::displayItem(double multiplier) {
+    int price = (price_ * multiplier);
+    string output = name_ + " - $" +  to_string(price) + "\n";
+    return output;
 }
 
 string Items::getName() {
@@ -25,5 +27,8 @@ double Items::getPrice() {
     return price_;
 }
 int Items::getQuality() {
-    return quality;
+    return quality_;
+}
+int Items::addQuality(int change) {
+    quality_ += change;
 }
