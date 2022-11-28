@@ -37,10 +37,13 @@ class Game {
         int setTeamNames(string input);
 
         void printStatus(Racer racer);        
-        void shop();
-        void mainMenu();
-        void openMap();
+        
+        void mainMenu(bool isShop, bool isRace);
+        bool eat();
+        bool repair();
 
+        Map map();
+        void shop();
         bool ride(int required_level);
 
         double getMoney();

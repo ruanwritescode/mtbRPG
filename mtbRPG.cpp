@@ -103,7 +103,7 @@ int main(){
         case 1:
             cout << "Checkpoint!" << endl;
             mtbRPG.setCheckpoint(1);
-            mtbRPG.mainMenu();
+            mtbRPG.mainMenu(false, false);
     }
     system("clear");
 

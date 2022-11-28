@@ -69,25 +69,34 @@ string menuBox(string prompt, bool justification) {
     }
     output += "+\n";
     for(int i = 0; i < pieces; i++) {
-        output += "| ";
-        if(justification) {
+        if(parts[i] == " ") {
+            output += "+-";
             for(int j = 0; j < width;j++) {
-                if(j == (width/2) - (parts[i].length()/2)) {
-                    output += parts[i];
-                    j += parts[i].length() - 1;
+                output += "-";
+            }
+            output += "-+\n";
+        }
+        else {
+            output += "| ";
+            if(justification) {
+                for(int j = 0; j < width;j++) {
+                    if(j == (width/2) - (parts[i].length()/2)) {
+                        output += parts[i];
+                        j += parts[i].length() - 1;
+                    }
+                    else {
+                        output += " ";
+                    }
                 }
-                else {
+            }
+            else {
+                output += parts[i];
+                for(int j = 0; j < width - parts[i].length();j++) {
                     output += " ";
                 }
             }
+            output += " |\n";
         }
-        else {
-            output += parts[i];
-            for(int j = 0; j < width - parts[i].length();j++) {
-                output += " ";
-            }
-        }
-        output += " |\n";
     }
     output += "+";
     for(int i = 0;i < width + 2;i++ ) {

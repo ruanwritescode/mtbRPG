@@ -1,4 +1,5 @@
 #include "Racer.h"
+#include <cmath>
 
 Racer::Racer() {
     name_ = "";
@@ -30,6 +31,15 @@ int Racer::setStrength(int strength) {
     strength_ = strength;
     return 1;
 }
+void Racer::modStrength(double rate) {
+    if(rate > 0) {
+        strength_ += rate * (100 -strength_);
+    }
+    else {
+        strength_ += rate * strength_;
+    }
+}
+
 int Racer::getSkill() {
     return skill_;
 }
@@ -37,12 +47,29 @@ int Racer::setSkill(int skill) {
     skill_ = skill;
     return 1;
 }
+void Racer::modSkill(double rate) {
+    if(rate > 0) {
+        skill_ += rate * (100 -skill_);
+    }
+    else {
+        skill_ += rate * skill_;
+    }
+}
+
 int Racer::getEndurance(){
     return endurance_;
 }
 int Racer::setEndurance(int endurance) {
     endurance_ = endurance;
     return 1;
+}
+void Racer::modEndurance(double rate) {
+    if(rate > 0) {
+        endurance_ += rate * (100 -endurance_);
+    }
+    else {
+        endurance_ += rate * endurance_;
+    }
 }
 
 int Racer::getMental(){
@@ -52,6 +79,14 @@ int Racer::setMental(int mental) {
     mental_ = mental;
     return 1;
 }
+void Racer::modMental(double rate) {
+    if(rate > 0) {
+        mental_ += rate * (100 -mental_);
+    }
+    else {
+        mental_ += rate * mental_;
+    }
+    }
 
 int Racer::getPoints(){return points_;}
 int Racer::setPoints(int points) {
@@ -140,7 +175,7 @@ bool Racer::addTires(int input_num_tires, double money, double tires_price){
     }
     else {
         for(int i = 0; i < input_num_tires;i++) {
-            tires_.push_back(10);
+            tires_.push_back(20);
         }
     }
     return true;
@@ -152,11 +187,12 @@ void Racer::setTires(vector<int> saved_tires) {
 vector<int> Racer::getTires() {
     return tires_;
 }
-
-string Racer::racerStats() {
-    string stats;
-    stats += name_ + ": Strength: " + to_string(strength_) + " | Skill: " + to_string(skill_) + " | Endurance: " + to_string(endurance_) + " | Mental: " + to_string(mental_);
-    return stats;
+bool Racer::modTire() {
+    if(tires_.at(0) != 0) {
+            tires_.at(0)--;
+            return true;
+    }
+    return false;
 }
 
 Items Racer::getBikePart(int category) {
@@ -176,6 +212,19 @@ Items Racer::getBikePart(int category) {
     return part;
 }
 
+void Racer::modFrame(double rate) {
+        frame_.addQuality((rate) * ((100 - frame_.getQuality())/5) - 5);
+}
+void Racer::modSuspension(double rate) {
+        suspension_.addQuality((rate) * ((100 - suspension_.getQuality())/5) - 5);
+}
+void Racer::modBrakes(double rate) {
+        brakes_.addQuality((rate) * ((100 - brakes_.getQuality())/5 - 5));
+}
+void Racer::modWheels(double rate) {
+        wheels_.addQuality((rate) * ((100 - wheels_.getQuality())/5) - 5);
+}
+
 bool Racer::areConsumablesUnlocked() {
     return unlocked_consumables;
 }
@@ -190,10 +239,15 @@ void Racer::unlockParts(bool unlock) {
     unlocked_parts = unlock;
 }
 
+string Racer::racerStats() {
+    string stats;
+    stats += name_ + ": Strength: " + to_string(strength_) + " | Skill: " + to_string(skill_) + " | Endurance: " + to_string(endurance_) + " | Mental: " + to_string(mental_);
+    return stats;
+}
 string Racer::consumableStats() {
     string output;
     if(unlocked_consumables) {
-        output += to_string(toolkits_) + "/" + to_string(MAX_TOOLS) + " Toolkits : Snacks " + to_string(snacks_) + "/" + to_string(MAX_SNACKS) + "   ";
+        output += to_string(toolkits_) + "/" + to_string(MAX_TOOLS) + " Toolkits : " + to_string(snacks_) + "/" + to_string(MAX_SNACKS) + " Snacks : " + to_string(getNumTires()) + "/" + to_string(MAX_TIRES) + " Tires";
     }
     return output;
 }
@@ -308,12 +362,12 @@ string Racer::bikeStats() {
         }
         width = max_width;
         if(tires_.size() > 0) {
-            string tire_wear = "Current Tires";
+            string tire_wear = "Current Tire";
             for(int i = 0; i < (width - tire_wear.length() - 2);i++) {
                 stats += " ";
             }
             stats += tire_wear + " : ";
-            for(int i = 1;i <= (tires_.at(0)*2);i++) {
+            for(int i = 1;i <= (tires_.at(0));i++) {
                 if(i % 2 == 1) {
                     stats += "[";
                     width -= 1;

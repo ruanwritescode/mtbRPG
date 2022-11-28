@@ -1,3 +1,9 @@
+This is a basic start
+≤
+This is the Mid Start
+≤
+This is a high level start
+≤
 ,--------------------------,   
 | Val Di Sole World Champs |     
 |--------------------------|     
@@ -12,6 +18,9 @@
 ||          ;,',;    []   ||     
 ||__________;.'.;____[]___|| 
 |___________;.'.;__________|    
-In the start gate...
+ 
+Here we go...
+Final race...
+Time to become World Champion...
 3... 2... 1...
 GO!!!

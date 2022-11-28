@@ -1,99 +1,112 @@
- \ \     .7/\,';o__[      ~~~^~~\\ | 
- / /       \/  __ <>     ~~   ~~ | |
-| |       ,_{__} ,__        \~~  | |   
- \ \      (_)    |_/        ++-- | |
-  \ \       <>_/ \__,      / ~__/  )
-   \ \    /   (_) ___\    _~_~/\\__|
-    \ \   (_)__/~_<>|    ~~~ () /\~|
+.7/\,';o__[      ~~~^~~\\ |     \ \   
+  \/  __ <>     ~~   ~~ | |     / /   
+ ,_{__} ,__        \~~  | |    | |    
+ (_)    |_/        ++-- | |     \ \   
+   <>_/ \__,      / ~__/  )      \ \  
+ /   (_) ___\    _~_~/\\__|       \ \ 
+ (_)__/~_<>|    ~~~ () /\~|        \ \
+  
 Line Choice Section
-1.Rut           (Requires Time)
-2.Rock Garden   (Requires Strength)
-3.Roots         (Requires Skill)
-≤,3,time,strength,skill
+ 
+1. Rock Garden   (Requires Strength)
+2. Roots            (Requires Skill)
+3. Rut                   (Lose Time)
+≤,3,strength,skill,time
    """"----___            
-              ""--__                    
-                    '-_            
- --___                 \    
-       \                \   
-        |               |. 
-         |               |     
+              ""--__      
+                    '-_   
+ --___                 \  
+       \                \ 
+        |               |.
+         |               |
+  
 Left Hand Corner
-1.Corner Inside     (Requires Skill)
-2.Corner Outside    (Requires Time)
+ 
+1. Corner Inside      (Requires Skill)
+2. Corner Outside          (Lose Time)
 ≤,2,skill,time
-         _------""""              
-      ,-'                     
-     /                              
-    /                  ___--         
-   |                 /            
-  |                 |              
-  |                |            
-Right Hand Corner
-1.Corner Outside    (Requires Time)
-2.Corner Inside     (Requires Skill)
-≤,2,time,skill
-           __/___________   /               
-          /              /"7                  
-         |               |/                 
-       __/____________   /                         
-      /               /"7               
-     |                |/                
-   __/_____________   /              
-  /                /"7                
- |                 |/               
- /                 /               
-Roller Section!
-1.Pump          (Requires Endurance)
-2.Single Double (Requires Skill)
-3.Triple        (Requires Strength)
-≤,2,endurance,skill,strength
- <>           ___    , ,       
-     ,    *  (___)        "   
-      .     (_____)   ;    /
- ~        _(_______)_        .   
-     '  _(___________)_  <#       
-    ~ _(_______________)_    %    
-  * _(___________________)_       {}        
-   /                       \  +'      
-Moto Whoop Section
+         _------""""        
+      ,-'                   
+     /                      
+    /                  ___--
+   |                 /      
+  |                 |       
+  |                |        
+  
+Right Hand Corner  
+ 
+1. Corner Inside     (Requires Skill)
+2. Corner Oustie          (Lose Time)
+≤,2,skill,time
+           __/___________   /
+          /              /"7 
+         |               |/  
+       __/____________   /   
+      /               /"7    
+     |                |/     
+   __/_____________   /      
+  /                /"7       
+ |                 |/        
+ /                 /         
+  
+Roller Section   
+ 
+1. Triple        (Requires Strength)
+2. Double           (Requires Skill)
+3. Pump         (Requires Endurance)
+≤,3,strength,skill,endurance
+ <>           ___    , ,            
+     ,    *  (___)        "         
+      .     (_____)   ;    /        
+ ~        _(_______)_        .      
+     '  _(___________)_  <#         
+    ~ _(_______________)_    %      
+  * _(___________________)_       {}
+   /                       \  +'    
+  
+Moto Whoop Section   
+ 
 Sorry, no choice here, I hope your bike is strong!
-Press a number 1-9 to see how you hold up
+Press a number 1-9 to continue.
 ≤,9,bike
-    _____-----""""""""       
-   /   ______----------      
-   |   \                  
-   \  """""-----________   
-    """""------_______  ""\ 
-                     _|   |       
- _____-----""""""""""   _/    
+    _____-----""""""""     
+   /   ______----------    
+   |   \                   
+   \    """-----________   
+    """""------_______  ""\
+                     _|   |
+ _____-----""""""""""   _/ 
  _____---------"""-----"   
+  
 Switchbacks
-1.Endo Turns	(Requires Skill)
-2.Wide Turns   	(Requires Endurance)
+ 
+1. Endo Turns       (Requires Skill)
+2. Wide Turns   (Requires Endurance)
 ≤,2,skill,endurance
-          ,'        ,'         /   /     
-        _;________,'        ,-' ,-'    
-    __-'          '-__     /   /     
-                         .'  .'    
-    _________           /   /          
-   /        /'-_       /   /      
-_-'      _-'          /   / 
-
-1.Gap Jump      (Requires Skill)
-2.Chicken Line  (Requires Time)
-≤,2,skill,time                                                
-           /    \                
-          /    • \ 
-         /  .     \
-        /          \
-       /       ~    \
-      /              \
-     /     ~          \
-   _/            ,     \_
+          ,'        ,'         /   /
+        _;________,'        ,-' ,-' 
+    __-'          '-__     /   /    
+                         .'  .'     
+    _________           /   /       
+   /        /'-_       /   /        
+_-'      _-'          /   /         
+  
+Gap Jump
+ 
+1. Send It!       (Requires Skill)
+2. Chicken Line        (Lose Time)
+≤,2,skill,time            
+           /    \          
+          /    ' \         
+         /  .     \        
+        /          \       
+       /       ~    \      
+      /              \     
+     /     ~          \    
+   _/            ,     \_  
+  
 Motorway Straight
-1. Pedal (Requires Endurance)
-2. Speed tuck (Requires Time)
+ 
+1. Pedal   (Requires Endurance)
+2. Tuck             (Lose Time)
 ≤,2,endurance,time
-
-
-
