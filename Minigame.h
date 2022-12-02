@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <cmath>
 
 using namespace std;
 
@@ -20,6 +21,7 @@ class Minigame {
         int length_;
         int minutes_;
         int seconds_;
+        int milli_sec;
 
         int num_features;
 
@@ -35,13 +37,17 @@ class Minigame {
     public:
         Minigame();
         Minigame(string name, int level);
+        Minigame(string name, int level, int entry_fee, int endcap, int length, int min, int sec, int milli);
+
+        string getAttributes();
 
         string getName(){return name_;}
         int getLevel(){return level_;}
         int getEntry(){return entry_fee_;}
         int getLength(){return length_;}
 
-        string getTime();
+        int getTime();
+        string timeToText(int minutes, int seconds, int milli_sec);
 
         string getStart();
         string getFinish();

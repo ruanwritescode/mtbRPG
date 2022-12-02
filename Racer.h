@@ -58,6 +58,8 @@ class Racer {
         int setMental(int mental);
         void modMental(double rate);
 
+        void modStat(double rate,int stat);
+
         int getPoints();
         int setPoints(int points);
         int addPoints(int earned_points);
@@ -79,7 +81,9 @@ class Racer {
         void setTires(vector<int> tires);
         vector<int> getTires();
         bool modTire();
+        bool replaceTire();
 
+        bool repair(int multi);
         void modFrame(double rate);
         void modSuspension(double rate);
         void modBrakes(double rate);

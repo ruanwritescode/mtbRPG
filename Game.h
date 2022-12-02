@@ -23,10 +23,15 @@ class Game {
         int money_;
         int checkpoint_;
 
+        string info;
+        string action;
+        char direction;
+
         vector<Minigame> races;
 
         Map usa;
         Map europe;
+        Map map_;
 
     public:
         Game();
@@ -34,17 +39,20 @@ class Game {
 
         void initializeMaps();
         int setPlayerName(string input);
+        Racer getPlayer();
         int setTeamNames(string input);
-
-        void printStatus(Racer racer);        
         
-        void mainMenu(bool isShop, bool isRace);
+        void gameWindow(string display);
+        void setInfo(string input);
+        string printStatus(Racer racer);        
+        
+        void mainMenu();
         bool eat();
         bool repair();
 
         Map map();
         void shop();
-        bool ride(int required_level);
+        bool ride(bool next_level);
 
         double getMoney();
         bool setMoney(double moneyflow);
@@ -62,7 +70,6 @@ class Game {
         char directionInput();
 
         int readRaces(string filename);
-
 
 };
 

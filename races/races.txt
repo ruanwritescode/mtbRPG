@@ -1,0 +1,29 @@
+Local Downhill Race,1
+Local Enduro Race,1
+Wednesday Night Series,1
+Bootleg Enduro,2
+County Cup Downhill,2
+County Cup Enduro,2
+Not A Race,2
+Cranksgiving Weekend,3
+State Championship Downhill,3
+State Championship Enduro,3
+Downhill Regionals,3
+Big Mountain Enduro,4
+MAXXIS Enduro Series,4
+IXS Downhill Cup,4
+National Championship Downhill,5
+US Open Enduro,5
+Pro GRT,5
+World Cup Snowshoe,6
+World Cup Andorra,7
+World Cup Leogang,7
+World Cup Lenzerheide,7
+World Cup Fort William,7
+World Cup Maribor,7
+World Cup Lousa,7
+Val Di Sole World Championship,8
+
+
+
+

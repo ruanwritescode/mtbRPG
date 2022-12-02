@@ -12,7 +12,7 @@ Map::Map(string zone)
     srand(time(NULL));
     resetMap(zone);
     spawnRaces();
-    spawnShops();
+    // spawnShops();
 }
 
 /*
@@ -48,7 +48,7 @@ void Map::resetMap(string zone)
 
     ifstream mapin;
     char map_point;
-    mapin.open("./txt/" + zone + ".txt");
+    mapin.open("./maps/" + zone + ".txt");
     int rise = 0;
     int run = 0;
     if(!mapin.fail()) {
@@ -132,6 +132,11 @@ int Map::getRaceCount()
     return race_count_;
 }
 
+// return maximum number of visible races
+int Map::getMaxRaces() {
+    return max_races_;
+}
+
 // return current shop count
 int Map::getShopCount()
 {
@@ -170,7 +175,7 @@ void Map::setFinalRace(int x, int y)
 }
 
 // returns member variable height
-int Map::getNumRows()
+int Map::getHeight()
 {
     return height;
 }
@@ -178,7 +183,7 @@ int Map::getNumRows()
 void Map::setHeight(int input_height) {height = input_height;}
 
 // returns member variable width
-int Map::getNumCols()
+int Map::getWidth()
 {
     return width;
 }
@@ -358,7 +363,7 @@ void Map::setMaxShops(int max_shops) {
  * Parameters: y (int),y (int)
  * Return: boolean (bool)
  */
-bool Map::addShop(int x, int y, int found)
+bool Map::addShop(int x, int y, bool found)
 {
     if (shop_count_ >= map_max_shops_)
     {
@@ -379,14 +384,14 @@ bool Map::addShop(int x, int y, int found)
     return false;
 }
 
-void Map::spawnShops() {
-    while(shop_count_ < map_max_shops_/2) {
-        int x = 1 + rand() % (width - 2);
-        x = x - 1 + (x % 2);
-        int y = 1 + rand() % (height- 2);
-        addShop(x,y,false);
-    }
-}
+// void Map::spawnShops() {
+//     while(shop_count_ < map_max_shops_/2) {
+//         int x = 1 + rand() % (width - 2);
+//         x = x - 1 + (x % 2);
+//         int y = 1 + rand() % (height- 2);
+//         addShop(x,y,false);
+//     }
+// }
 
 /*
  * Algorithm: Create a shop on the map
@@ -416,7 +421,7 @@ bool Map::addRace(int x, int y)
     {
         return false;
     }
-    if(isFreeSpace(x+1,y) && isFreeSpace(x-1,y) && isFreeSpace(x,y+1) && isFreeSpace(x,y-1)) {
+    if(isOnMap(x+2,y) && isOnMap(x-2,y) && isOnMap(x,y+1) && isOnMap(x,y-1)) {
         race_locations_[race_count_][0] = x;
         race_locations_[race_count_][1] = y;
         race_count_++;
@@ -635,15 +640,17 @@ bool Map::move(char direction)
  * Parameters: none
  * Return: nothing (void)
  */
-void Map::displayMap()
-{
+string Map::displayMap()
+{   
+    string display_map = "";
+    string map_key = "X = Player  |  S = Shop  |  R = Race  |  F = Final Race";
     for (int y = 0;y < height; y++)
     {
-        for (int x = 0;x < width;x++)
+        for (int x = 0;x < width-1;x++)
         {
             if (player_position_[0] == x && player_position_[1] == y)
             {
-                cout << PARTY;
+                display_map += PARTY;
             }
             else if (map_data_[x][y] == SHOP)
             { // Shop location, have to check if they were found yet
@@ -653,22 +660,24 @@ void Map::displayMap()
                     {
                         if (shop_locations_[k][2] == true)
                         {
-                            cout << SHOP;
+                            display_map += SHOP;
                         }
                         else
                         {
-                            cout << UNEXPLORED;
+                            display_map += UNEXPLORED;
                         }
                     }
                 }
             }
             else
             {
-                cout << map_data_[x][y];
+                display_map += map_data_[x][y];
             }
         }
+        display_map += "\n";
     }
-    cout << endl;
+    display_map += " \n" + map_key + "\n";
+    return display_map;
 }
 
 /*
@@ -692,17 +701,17 @@ int Map::exploreSpace(int x, int y)
             return 1;
         }
     }
-    int chance = rand() % 4;
-    if(chance == 1) {
-            if(addShop(player_position_[0],player_position_[1],true)) {
-                return 1;
-            }
-    }
-    if(chance == 2) {
-        if(addRace(player_position_[0],player_position_[1])) {
-            return 2;
-        }
-    }
+    // int chance = rand() % 4;
+    // if(chance == 1) {
+    //         if(addShop(player_position_[0],player_position_[1],true)) {
+    //             return 1;
+    //         }
+    // }
+    // if(chance == 2) {
+    //     if(addRace(player_position_[0],player_position_[1])) {
+    //         return 2;
+    //     }
+    // }
     if (isFreeSpace(x, y))
     {
         map_data_[player_position_[0]][player_position_[1]] = EXPLORED;
