@@ -20,17 +20,17 @@ Shop.h\
 \
 All txt files should be kept in their respective directories off the main directory as follows\
 \
-mtbRPG -\
-    maps -\
-        empty.txt\
-        europe.txt\
-        usa.txt
-    races -
-        starts.txt
-        races.txt
-        terrain.txt
-    saves -
-        savelist.txt
+mtbRPG -
+    * maps -\
+        * empty.txt\
+        * europe.txt\
+        * usa.txt
+    * races -
+        * starts.txt
+        * races.txt
+        * terrain.txt
+    * saves -
+        * savelist.txt
 
 **NOTE ABOUT SAVES**
 If you do not have a "saves" folder, or "savelist.txt" file. The program will automatically create one for you. To clear all save history, simply delete the "saves" folder.
