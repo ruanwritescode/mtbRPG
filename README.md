@@ -1,12 +1,13 @@
 # mtbRPG
+=======================
 A game created in C++. Using the terminal as an input/output interface, this game explores the use of classes, objects, file streams, vectors, arrays, terminal commands, randomizers, and more.
-------------------------
+
 HOW TO COMPILE AND RUN
 ------------------------
 Compile: g++ -std=c++17 Game.cpp Items.cpp Map.cpp Minigame.cpp Racer.cpp Shop.cpp mtbRPG.cpp -o mtbRPG\
 Run: ./mtbRPG\
 Once Running: When you have the program started, there is a mechanic that allows you, at any point, to restart the game with the "esc" key. This will recompile the code from within and automatically run. To fully terminate the program. Restart, then use the "Terminate" option on the opening menu screen.
-------------------------
+
 DEPENDENCIES
 ------------------------
 Dependent .h files in the main directory\
@@ -21,28 +22,28 @@ Shop.h\
 All txt files should be kept in their respective directories off the main directory as follows\
 \
 mtbRPG -\
-    * maps -\
-        * empty.txt\
-        * europe.txt\
-        * usa.txt
-    * races -
-        * starts.txt
-        * races.txt
-        * terrain.txt
-    * saves -
-        * savelist.txt
+    maps -\
+        empty.txt\
+        europe.txt\
+        usa.txt\
+    races -\
+        starts.txt\
+        races.txt\
+        terrain.txt\
+    saves -\
+        savelist.txt
 
 **NOTE ABOUT SAVES**\
 If you do not have a "saves" folder, or "savelist.txt" file. The program will automatically create one for you. To clear all save history, simply delete the "saves" folder.
-------------------------
+
 SUBMISSION INFORMATION
 ------------------------
 CSCI1300 Fall 2022 Final Project\
 Author: Ruan Abarbanel\
 Recitation: 103 - Ojasvi Bhalerao\
-Date: Nov 30, 2022\
+Date: Nov 30, 2022
 
-------------------------
+
 ABOUT THIS PROJECT
 ------------------------
 **The Overview**
