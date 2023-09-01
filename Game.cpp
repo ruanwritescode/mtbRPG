@@ -49,7 +49,7 @@ Game::Game() {
             usa = Map("usa");
             europe = Map("europe");
             map_ = usa;
-            readRaces("races.txt");
+            readRaces("./races.txt");
             break;
         }
     }
@@ -903,6 +903,7 @@ void Game::restart() {
         exit(0);
     }
 }
+// I made a change
 
 string Game::choiceList(string choices[],int number,int cursor) {
     string output;
@@ -985,7 +986,7 @@ void Game::saveGame() {
     string line;
     bool overwrite = true;
     bool exists = false;
-    check.open("../saves/savelist.txt");
+    check.open("./saves/savelist.txt");
     if(!check.fail()) {
         getline(check,line);
         while(!check.eof()) {
@@ -998,21 +999,21 @@ void Game::saveGame() {
             getline(check,line);
         }
         if(!exists) {
-            fout.open("../saves/savelist.txt",ios_base::app);
+            fout.open("./saves/savelist.txt",ios_base::app);
             fout << save_name << endl;
             fout.close();
         }
     }
     else {
-        system("mkdir ../saves/");
-        ofstream create("../saves/savelist.txt");
+        system("mkdir ./saves/");
+        ofstream create("./saves/savelist.txt");
         create.close();
         saveGame();
         return;
     }
     check.close();
     if(overwrite) {
-        fout.open("../saves/" + save_name + ".txt");
+        fout.open("./saves/" + save_name + ".txt");
         // if(fout.fail()) {
         //     return -1;
         // }
@@ -1096,7 +1097,7 @@ void Game::loadGame() {
     vector<string> load_list;
     int saved = 0;
     bool overwrite = true;
-    fin.open("../saves/savelist.txt");
+    fin.open("./saves/savelist.txt");
     if(!fin.fail()) {
         getline(fin,load_name);
         while(!fin.eof()) {
@@ -1133,7 +1134,7 @@ void Game::loadGame() {
         }
     }
     fin.close();
-    fin.open("../saves/" + load_name + ".txt");
+    fin.open("./saves/" + load_name + ".txt");
     string value;
     string line[10];
     vector<int> saved_tires;
@@ -1299,7 +1300,7 @@ int Minigame::readfeatures(string filename) {
     ifstream fin;
     string image = "";
     num_features = 0;
-    fin.open("../races/" + filename);
+    fin.open("./races/" + filename);
     if(fin.fail()) {
         return -1;
     }
@@ -1321,7 +1322,7 @@ int Minigame::readfeatures(string filename) {
         }
     }
     fin.close();
-    fin.open("../races/starts.txt");
+    fin.open("./races/starts.txt");
     if(fin.fail()) {
         return -1;
     }
@@ -1341,7 +1342,7 @@ int Minigame::readfeatures(string filename) {
 int Game::readRaces(string filename) {
     ifstream fin;
     string line = "";
-    fin.open("../races/" + filename);
+    fin.open("./races/" + filename);
     if(fin.fail()) {
         return -1;
     }
@@ -1360,6 +1361,8 @@ int Game::readRaces(string filename) {
     return races.size();
 }
 
+// making an edit for makefile
+
 int Shop::readInventory(string filename) {
     ifstream fin;
     string line;
@@ -1367,7 +1370,7 @@ int Shop::readInventory(string filename) {
     int pieces = 0;
     int department = 0;
 
-    fin.open("../items/" + filename);
+    fin.open("./items/" + filename);
     
     if(fin.fail()) {
         cout << "Shop file input failed!" << endl;
