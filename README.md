@@ -20,7 +20,7 @@ Shop.h\
 \
 All txt files should be kept in their respective directories off the main directory as follows\
 \
-mtbRPG -
+mtbRPG -\
     * maps -\
         * empty.txt\
         * europe.txt\
