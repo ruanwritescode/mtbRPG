@@ -1,15 +1,15 @@
 # mtbRPG
-=======================
+
 A game created in C++. Using the terminal as an input/output interface, this game explores the use of classes, objects, file streams, vectors, arrays, terminal commands, randomizers, and more.
 
-HOW TO COMPILE AND RUN
-------------------------
+## HOW TO COMPILE AND RUN
+
 Compile: g++ -std=c++17 Game.cpp Items.cpp Map.cpp Minigame.cpp Racer.cpp Shop.cpp mtbRPG.cpp -o mtbRPG\
 Run: ./mtbRPG\
 Once Running: When you have the program started, there is a mechanic that allows you, at any point, to restart the game with the "esc" key. This will recompile the code from within and automatically run. To fully terminate the program. Restart, then use the "Terminate" option on the opening menu screen.
 
-DEPENDENCIES
-------------------------
+## DEPENDENCIES
+
 Dependent .h files in the main directory\
 funcs.h\
 Game.h\
@@ -33,19 +33,20 @@ mtbRPG -\
     saves -\
         savelist.txt
 
-**NOTE ABOUT SAVES**\
+**NOTE ABOUT SAVES**
+
 If you do not have a "saves" folder, or "savelist.txt" file. The program will automatically create one for you. To clear all save history, simply delete the "saves" folder.
 
-SUBMISSION INFORMATION
-------------------------
+### SUBMISSION INFORMATION
+
 CSCI1300 Fall 2022 Final Project\
 Author: Ruan Abarbanel\
 Recitation: 103 - Ojasvi Bhalerao\
 Date: Nov 30, 2022
 
 
-ABOUT THIS PROJECT
-------------------------
+## ABOUT THIS PROJECT
+
 **The Overview**
 
 This program simulates a mountain biker's journey to prepare, compete, and earn points to qualify for more difficult, more competative races. At the start you are given an allowance by your "sponsors" to purchase bike parts and build up a complete bike to use when racing. Complete all the avialable races on the map and you can qualify to race in the final race! If you beat this, get ready to preform on an even bigger stage.
