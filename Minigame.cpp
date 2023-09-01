@@ -43,7 +43,7 @@ Minigame::Minigame(string name, int level, int entry_fee, int endcap, int length
 }
 
 string Minigame::getAttributes () {
-    return name_ + "," + to_string(level_) + "," + to_string(entry_fee_) + "," + to_string(minutes_) + "," + to_string(seconds_) + "," + to_string(milli_sec) + "," + to_string(endcap_) + "," + to_string(length_);
+    return name_ + "," + to_string(level_) + "," + to_string(entry_fee_) + "," + to_string(endcap_) + "," + to_string(length_) + "," + to_string(minutes_) + "," + to_string(seconds_) + "," + to_string(milli_sec);
 }
 
 string Minigame::getTerrain(int feature) {

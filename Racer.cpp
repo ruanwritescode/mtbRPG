@@ -171,23 +171,26 @@ int Racer::addSnacks(int input_snacks) {
     return 1;
 }
 
-int Racer::getNumTires(){return tires_.size();}
-bool Racer::addTires(int input_num_tires, double money, double tires_price){
-    if(money < tires_price || tires_.size() + input_num_tires > MAX_TIRES) {
-        return false;
+int Racer::getNumTires(){
+    return tires_.size();
+}
+
+bool Racer::addTires(int input_num_tires){
+    for(int i = 0; i < input_num_tires;i++) {
+        tires_.push_back(20);
     }
-    else {
-        for(int i = 0; i < input_num_tires;i++) {
-            tires_.push_back(20);
-        }
-    }
-    unlockConsumables(true);
     return true;
 }
 
 void Racer::setTires(vector<int> saved_tires) {
     tires_ = saved_tires;
 }
+
+void Racer::resetTires() {
+    vector<int> empty;
+    tires_ = empty;
+}
+
 vector<int> Racer::getTires() {
     return tires_;
 }
@@ -277,7 +280,7 @@ string Racer::racerStats() {
 string Racer::consumableStats() {
     string output;
     if(unlocked_consumables) {
-        output += to_string(snacks_) + "/" + to_string(MAX_SNACKS) + " Snacks   |   " + to_string(toolkits_) + "/" + to_string(MAX_TOOLS) + " Toolkits   |   " + to_string(getNumTires()) + "/" + to_string(MAX_TIRES) + " Tires";
+        output +=  to_string(getNumTires()) + "/" + to_string(MAX_TIRES) + " Tires   |   " + to_string(snacks_) + "/" + to_string(MAX_SNACKS) + " Snacks   |   " + to_string(toolkits_) + "/" + to_string(MAX_TOOLS) + " Toolkits";
     }
     return output;
 }

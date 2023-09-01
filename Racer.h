@@ -77,8 +77,9 @@ class Racer {
         int addSnacks(int input_snacks);
 
         int getNumTires();
-        bool addTires(int input_num_tires, double money, double multiplier);
-        void setTires(vector<int> tires);
+        bool addTires(int input_num_tires);
+        void setTires(vector<int> saved_tires);
+        void resetTires();
         vector<int> getTires();
         bool modTire();
         bool replaceTire();

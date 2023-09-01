@@ -48,7 +48,7 @@ void Map::resetMap(string zone)
 
     ifstream mapin;
     char map_point;
-    mapin.open("./maps/" + zone + ".txt");
+    mapin.open("../maps/" + zone + ".txt");
     int rise = 0;
     int run = 0;
     if(!mapin.fail()) {
@@ -369,7 +369,7 @@ bool Map::addShop(int x, int y, bool found)
     {
         return false;
     }
-    if (!isFreeSpace(x,y))
+    if (!isFreeSpace(x,y) || map_data_[player_position_[0]][player_position_[1]] == HISTORY)
     {
         return false;
     }
@@ -613,6 +613,9 @@ bool Map::move(char direction)
         break;
     default:
         return false;
+    }
+    if(rand() % 10 == 3) {
+        addShop(player_position_[0],player_position_[1],true);
     }
     visited(player_position_[0], player_position_[1]);
 

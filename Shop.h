@@ -29,7 +29,7 @@ class Shop {
     public:
         Shop();
 
-        string cart(Racer cart, Racer player, int cart_tires);
+        string cart(Racer cart, Racer player, int cursor);
 
         double getSnackPrice();
         double getToolPrice();
@@ -39,7 +39,7 @@ class Shop {
         void changeMultiplier(int multiplier);
 
         vector<Items> getInventory(int category);
-        string displayInventory(int category);
+        string displayInventory(int category, int cursor);
 
         int readInventory(string filename);
 };

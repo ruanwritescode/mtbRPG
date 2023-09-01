@@ -82,7 +82,7 @@ using namespace std;
 //     return(choices);
 // }
 
-int main(){
+int main(int, char**){
     Game mtbRPG;
     string input;
     switch(mtbRPG.getCheckpoint()) {

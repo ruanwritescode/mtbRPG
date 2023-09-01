@@ -30,7 +30,7 @@ void Shop::changeMultiplier(int level) {
     multiplier_ = 1 + (double(level) * .17);
 }
 
-string Shop::cart(Racer cart, Racer player, int cart_tires) {  
+string Shop::cart(Racer cart, Racer player, int cursor) {  
     string output = "";
     int price = 0; //For conversion from double to int for easier readability
     int cart_total = 0;
@@ -39,17 +39,23 @@ string Shop::cart(Racer cart, Racer player, int cart_tires) {
         string cat_out = "";
         Items cart_part = cart.getBikePart(category);
         Items player_part = player.getBikePart(category);
+        if(category == cursor) {
+            cat_out += "~ ";
+        }
+        else {
+            cat_out += "  ";
+        }
         if(category == 1) {
-            cat_out += "1. Frames: ";
+            cat_out += "Frames: ";
         }
         else if (category == 2) {
-            cat_out += "2. Shocks: ";
+            cat_out += "Shocks: ";
         }
         else if (category == 3) {
-            cat_out += "3. Brakes: ";
+            cat_out += "Brakes: ";
         }
         else if (category == 4) {
-            cat_out += "4. Wheels: ";
+            cat_out += "Wheels: ";
         }
         // for(int w = 0; w < (width - cat_out.length());w++) {
         //         cat_out += " ";
@@ -69,65 +75,58 @@ string Shop::cart(Racer cart, Racer player, int cart_tires) {
             for(int i = 0; i < (width - 3);i++) {
                 cat_out += " ";
             }
-            // for(int i = 0; i < (width - 3);i++) {
-            //     cat_out += " ";
-            // }
         }
         output += cat_out + "\n";
     }
-    price = cart_tires * tire_price * multiplier_;
-    cart_total += price;
-    output += " \n5. Tires:  ";
-    if(cart_tires > 0) {
-        output += to_string(cart_tires);
-        for(int i = 0; i < (width - 1 - to_string(price).length());i++) {
-            output += " ";
+    output += " ";
+    for(int category = 5; category < 8; category ++) {
+        int cart_amount;
+        if(category == cursor) {
+            output += "\n~ ";
         }
-        output += " $" + to_string(price);
-    }
-    else {
-        output += "Empty";
-        for(int i = 0; i < (width - 3);i++) {
-            output += " ";
+        else {
+            output += "\n  ";
         }
-    }
+        if(category == 5) {
+            cart_amount = cart.getNumTires() - player.getNumTires();
+            price = cart_amount * tire_price * multiplier_;
+            cart_total += price;
+            output += "Tires:  ";
+        }
+        if(category == 6) {
+            cart_amount = cart.getSnacks() - player.getSnacks();
+            price = (cart_amount) * snack_price * multiplier_;
+            cart_total += price;
+            output += "Snacks: ";
+        }
+        if(category == 7) {
+            cart_amount = cart.getToolkits() - player.getToolkits();
+            price = (cart_amount) * tool_price * multiplier_;
+            cart_total += price;
+            output += "Tools:  ";
+        }
 
-    price = (cart.getSnacks() - player.getSnacks()) * snack_price * multiplier_;
-    cart_total += price;
-    int cart_snacks = cart.getSnacks() - player.getSnacks();
-    output += "\n6. Snacks: ";
-    if(cart_snacks > 0) {
-        output += to_string(cart_snacks);
-        for(int i = 0; i < (width - 1 - to_string(price).length());i++) {
-            output += " ";
+        if(cart_amount > 0) {
+            output += to_string(cart_amount);
+            for(int i = 0; i < (width - 1 - to_string(price).length());i++) {
+                output += " ";
+            }
+            output += " $" + to_string(price);
         }
-        output += " $" + to_string(price);
-    }
-    else {
-        output += "Empty";
-        for(int i = 0; i < (width - 3);i++) {
-            output += " ";
+        else {
+            output += "Empty";
+            for(int i = 0; i < (width - 3);i++) {
+                output += " ";
+            }
         }
     }
+    if(cursor == 8) {
+        output += "\n \n~ Checkout ~";
 
-    price = (cart.getToolkits() - player.getToolkits()) * tool_price * multiplier_;
-    cart_total += price;
-    int cart_tools = cart.getToolkits() - player.getToolkits();
-    output += "\n7. Tools:  ";
-    if(cart_tools > 0) {
-        output += to_string(cart_tools);
-        for(int i = 0; i < (width - 1 - to_string(price).length());i++) {
-            output += " ";
-        }
-        output += " $" + to_string(price);
     }
     else {
-        output += "Empty";
-        for(int i = 0; i < (width - 3);i++) {
-            output += " ";
-        }
+        output += "\n \n  Checkout  ";
     }
-    output += "\n \n0. Checkout";
     for(int i = 0; i < (width - 5 - to_string(cart_total).length());i++) {
         output += " ";
     }
@@ -154,7 +153,7 @@ vector<Items> Shop::getInventory(int category) {
     return displayed;
 }
 
-string Shop::displayInventory(int category) {
+string Shop::displayInventory(int category, int cursor) {
     string output;
     string title;
     vector<Items> displayed = getInventory(category);
@@ -173,7 +172,12 @@ string Shop::displayInventory(int category) {
     }
     output += title + "\n \n";
     for(int i = 0;i < displayed.size();i++) {
-        output += to_string(i + 1) + ". ";
+        if(cursor == i+1) {
+            output += "~ ";
+        }
+        else {
+            output += "  ";
+        }
         output += displayed.at(i).getName();
         int price = displayed.at(i).getPrice() * multiplier_;
 
@@ -182,7 +186,13 @@ string Shop::displayInventory(int category) {
         }
         output += " $" + to_string(price) + "\n";
     }
-    output += " \n6. Clear " + title.substr(0,title.length());
-    output += "\n0. Go Back";
+    output += " \n";
+    if(cursor == displayed.size() + 1) {
+        output += "~ ";
+    }
+    else {
+        output += "  ";
+    }
+    output += "Clear " + title.substr(0,title.length());
     return output;
 }

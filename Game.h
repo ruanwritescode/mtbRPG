@@ -25,7 +25,9 @@ class Game {
 
         string info;
         string action;
+        string yesno[2];
         char direction;
+        int cursor;
 
         vector<Minigame> races;
 
@@ -57,8 +59,8 @@ class Game {
         double getMoney();
         bool setMoney(double moneyflow);
 
-        void loadingScreen(string direction);
-        int continueGame();
+        void loadingScreen(string direction,string display);
+        bool continueGame();
         
         void saveGame();
         void loadGame();
@@ -66,8 +68,16 @@ class Game {
         int getCheckpoint();
         void setCheckpoint(int);
 
-        int userInput(int choices);
         char directionInput();
+        int cursorInput(int choices, int position, string orientation);
+        void restart();
+        
+        string choiceList(string choices[],int number, int cursor);
+        string actionMenu(string choices[],int number,int cursor);
+        bool yesnoAction(string display);
+        string numberScroll(int choices, int number);
+
+        int optionMenu(string choices,int num_choices, int cursor, string display);
 
         int readRaces(string filename);
 
