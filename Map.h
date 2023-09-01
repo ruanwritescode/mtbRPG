@@ -36,8 +36,8 @@ private:
     int width;  // visible width of the map
 
     int map_max_shops_;
-    int shop_count_;  // stores number of misfortunes currently on map
-    int race_count_; // stores number of sites currently on map
+    int shop_count_;  // stores number of shops currently on map
+    int race_count_; // stores number of races currently on map
 public:
     Map();
     Map(string);
@@ -50,11 +50,12 @@ public:
     int getFinalX();
     int getFinalY();
     int getRaceCount();
+    int getMaxRaces();
     int getShopCount();
-    int getNumRows();
+    int getWidth();
     void setWidth(int width);
     void setHeight(int height);
-    int getNumCols();
+    int getHeight();
     bool isOnMap(int x, int y);
     bool isShopLocation(int x, int y);
     bool isRaceLocation(int x, int y);
@@ -67,11 +68,11 @@ public:
     void setFinalRace(int x, int y);
 
     // other
-    void displayMap();
+    string displayMap();
     bool move(char);
     void setMaxShops(int max_shops);
-    bool addShop(int x, int y, int found);
-    void spawnShops();
+    bool addShop(int x, int y, bool found);
+    // void spawnShops();
     bool addRace(int x, int y);
     void spawnRaces();
     bool removeShop(int x, int y);

@@ -8,7 +8,7 @@ Racer::Racer() {
     skill_      = 65 + rand() % 20;
     endurance_  = 65 + rand() % 20;
     mental_     = 100;
-    points_     = 0;
+    points_     = 1;
     toolkits_   = 0;
     snacks_     = 0;
     unlocked_consumables = 0;
@@ -33,7 +33,7 @@ int Racer::setStrength(int strength) {
 }
 void Racer::modStrength(double rate) {
     if(rate > 0) {
-        strength_ += rate * (100 -strength_);
+        strength_ += rate * (102 -strength_);
     }
     else {
         strength_ += rate * strength_;
@@ -49,10 +49,10 @@ int Racer::setSkill(int skill) {
 }
 void Racer::modSkill(double rate) {
     if(rate > 0) {
-        skill_ += rate * (100 -skill_);
+        skill_ += rate * (102 -skill_);
     }
     else {
-        skill_ += rate * skill_;
+        skill_ += rate/2.0 * skill_;
     }
 }
 
@@ -65,7 +65,7 @@ int Racer::setEndurance(int endurance) {
 }
 void Racer::modEndurance(double rate) {
     if(rate > 0) {
-        endurance_ += rate * (100 -endurance_);
+        endurance_ += rate * (102 -endurance_);
     }
     else {
         endurance_ += rate * endurance_;
@@ -81,7 +81,7 @@ int Racer::setMental(int mental) {
 }
 void Racer::modMental(double rate) {
     if(rate > 0) {
-        mental_ += rate * (100 -mental_);
+        mental_ += rate * (102 -mental_);
     }
     else {
         mental_ += rate * mental_;
@@ -95,6 +95,9 @@ int Racer::setPoints(int points) {
 }
 int Racer::addPoints(int earned_points) {
     points_ += earned_points;
+    if(points_ < 1){
+        points_ = 1;
+    }
     return 1;
 }
 
@@ -168,15 +171,13 @@ int Racer::addSnacks(int input_snacks) {
     return 1;
 }
 
-int Racer::getNumTires(){return tires_.size();}
-bool Racer::addTires(int input_num_tires, double money, double tires_price){
-    if(money < tires_price || tires_.size() + input_num_tires > MAX_TIRES) {
-        return false;
-    }
-    else {
-        for(int i = 0; i < input_num_tires;i++) {
-            tires_.push_back(20);
-        }
+int Racer::getNumTires(){
+    return tires_.size();
+}
+
+bool Racer::addTires(int input_num_tires){
+    for(int i = 0; i < input_num_tires;i++) {
+        tires_.push_back(20);
     }
     return true;
 }
@@ -184,6 +185,12 @@ bool Racer::addTires(int input_num_tires, double money, double tires_price){
 void Racer::setTires(vector<int> saved_tires) {
     tires_ = saved_tires;
 }
+
+void Racer::resetTires() {
+    vector<int> empty;
+    tires_ = empty;
+}
+
 vector<int> Racer::getTires() {
     return tires_;
 }
@@ -193,6 +200,10 @@ bool Racer::modTire() {
             return true;
     }
     return false;
+}
+bool Racer::replaceTire() {
+    tires_.erase(tires_.begin());
+    return true;
 }
 
 Items Racer::getBikePart(int category) {
@@ -212,17 +223,39 @@ Items Racer::getBikePart(int category) {
     return part;
 }
 
+bool Racer::repair(int multi) {
+    srand(time(NULL));
+    if(frame_.getQuality() > 0) {
+        frame_.addQuality((rand() % ((frame_.maxQuality() + 5 - frame_.getQuality())/5)) * multi);
+    }
+    if(suspension_.getQuality() > 0) {
+        suspension_.addQuality((rand() % ((suspension_.maxQuality() + 5 - suspension_.getQuality())/5)) * multi);
+    }
+    if(brakes_.getQuality() > 0) {
+        brakes_.addQuality((rand() % ((brakes_.maxQuality() + 5 - brakes_.getQuality())/5)) * multi);
+    }
+    if(wheels_.getQuality() > 0) {
+        wheels_.addQuality((rand() % ((wheels_.maxQuality() + 5 - wheels_.getQuality())/5)) * multi);
+    }
+    if(frame_.getQuality() <= 0 || suspension_.getQuality() <= 0 || brakes_.getQuality() <= 0 || wheels_.getQuality() <= 0) {
+        cout << "You have some parts on your bike that are broken beyond repair. Head to a bike shop to get some new components" << endl;
+    }
+    if(multi > 0) {
+        toolkits_--;
+    }
+    return true;
+}
 void Racer::modFrame(double rate) {
-        frame_.addQuality((rate) * ((100 - frame_.getQuality())/5) - 5);
+        frame_.addQuality(frame_.getQuality() * (rate));
 }
 void Racer::modSuspension(double rate) {
-        suspension_.addQuality((rate) * ((100 - suspension_.getQuality())/5) - 5);
+        suspension_.addQuality(suspension_.getQuality() * (rate));
 }
 void Racer::modBrakes(double rate) {
-        brakes_.addQuality((rate) * ((100 - brakes_.getQuality())/5 - 5));
+        brakes_.addQuality(brakes_.getQuality() * (rate));
 }
 void Racer::modWheels(double rate) {
-        wheels_.addQuality((rate) * ((100 - wheels_.getQuality())/5) - 5);
+        wheels_.addQuality(wheels_.getQuality() * (rate));
 }
 
 bool Racer::areConsumablesUnlocked() {
@@ -241,13 +274,13 @@ void Racer::unlockParts(bool unlock) {
 
 string Racer::racerStats() {
     string stats;
-    stats += name_ + ": Strength: " + to_string(strength_) + " | Skill: " + to_string(skill_) + " | Endurance: " + to_string(endurance_) + " | Mental: " + to_string(mental_);
+    stats += name_ + ": Strength " + to_string(strength_) + "  |  Skill " + to_string(skill_) + "  |  Endurance " + to_string(endurance_) + "  |  Mental " + to_string(mental_);
     return stats;
 }
 string Racer::consumableStats() {
     string output;
     if(unlocked_consumables) {
-        output += to_string(toolkits_) + "/" + to_string(MAX_TOOLS) + " Toolkits : " + to_string(snacks_) + "/" + to_string(MAX_SNACKS) + " Snacks : " + to_string(getNumTires()) + "/" + to_string(MAX_TIRES) + " Tires";
+        output +=  to_string(getNumTires()) + "/" + to_string(MAX_TIRES) + " Tires   |   " + to_string(snacks_) + "/" + to_string(MAX_SNACKS) + " Snacks   |   " + to_string(toolkits_) + "/" + to_string(MAX_TOOLS) + " Toolkits";
     }
     return output;
 }
@@ -256,21 +289,21 @@ string Racer::bikeStats() {
     int width = max_width;
     string stats = "";
     if(unlocked_parts){
-        stats += "BIKE STATS\nParts   Health\n";
+        stats += "Parts | Health\n";
         if(frame_.getName() != "") {
             for(int i = 0; i < (width - frame_.getName().length()-2);i++) {
                 stats += " ";
             }
-            stats += frame_.getName() + " : ";
-            for(int i = 1;i < frame_.getQuality()/10;i++) {
+            stats += frame_.getName() + " | ";
+            for(int i = 1;i <= frame_.getQuality()/10;i++) {
                     stats += "[]";
                     width -= 2;
             }
-            if(frame_.getQuality() % 10 < 3) {
+            if(frame_.getQuality() % 10 > 5) {
                 stats += "[]";
                 width -= 2;
             }
-            else {
+            else if(frame_.getQuality() % 10 != 0) {
                 stats += "[";
                 width -= 1;
             }
@@ -287,16 +320,16 @@ string Racer::bikeStats() {
             for(int i = 0; i < (width - suspension_.getName().length() - 2);i++) {
                 stats += " ";
             }
-            stats += suspension_.getName() + " : ";
-            for(int i = 1;i < suspension_.getQuality()/10;i++) {
+            stats += suspension_.getName() + " | ";
+            for(int i = 1;i <= suspension_.getQuality()/10;i++) {
                     stats += "[]";
                     width -= 2;
             }
-            if(suspension_.getQuality() % 10 < 3) {
+            if(suspension_.getQuality() % 10 > 5) {
                 stats += "[]";
                 width -= 2;
             }
-            else {
+            else if(suspension_.getQuality() % 10 != 0){
                 stats += "[";
                 width -= 1;
             }
@@ -313,16 +346,16 @@ string Racer::bikeStats() {
             for(int i = 0; i < (width - brakes_.getName().length() - 2);i++) {
                 stats += " ";
             }
-            stats += brakes_.getName() + " : ";
-            for(int i = 1;i < brakes_.getQuality()/10;i++) {
+            stats += brakes_.getName() + " | ";
+            for(int i = 1;i <= brakes_.getQuality()/10;i++) {
                     stats += "[]";
                     width -= 2;
             }
-            if(brakes_.getQuality() % 10 < 3) {
+            if(brakes_.getQuality() % 10 > 5) {
                 stats += "[]";
                 width -= 2;
             }
-            else {
+            else if(brakes_.getQuality() % 10 != 0){
                 stats += "[";
                 width -= 1;
             }
@@ -339,16 +372,16 @@ string Racer::bikeStats() {
             for(int i = 0; i < (width - wheels_.getName().length()-2);i++) {
                 stats += " ";
             }
-            stats += wheels_.getName() + " : ";
-            for(int i = 1;i < wheels_.getQuality()/10;i++) {
+            stats += wheels_.getName() + " | ";
+            for(int i = 1;i <= wheels_.getQuality()/10;i++) {
                     stats += "[]";
                     width -= 2;
             }
-            if(wheels_.getQuality() % 10 < 3) {
+            if(wheels_.getQuality() % 10 > 5) {
                 stats += "[]";
                 width -= 2;
             }
-            else {
+            else if(brakes_.getQuality() % 10 != 0){
                 stats += "[";
                 width -= 1;
             }
@@ -366,7 +399,7 @@ string Racer::bikeStats() {
             for(int i = 0; i < (width - tire_wear.length() - 2);i++) {
                 stats += " ";
             }
-            stats += tire_wear + " : ";
+            stats += tire_wear + " | ";
             for(int i = 1;i <= (tires_.at(0));i++) {
                 if(i % 2 == 1) {
                     stats += "[";

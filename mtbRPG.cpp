@@ -82,7 +82,7 @@ using namespace std;
 //     return(choices);
 // }
 
-int main(){
+int main(int, char**){
     Game mtbRPG;
     string input;
     switch(mtbRPG.getCheckpoint()) {
@@ -100,10 +100,20 @@ int main(){
             mtbRPG.setPlayerName(input);
             mtbRPG.continueGame();
             mtbRPG.shop();
-        case 1:
-            cout << "Checkpoint!" << endl;
+            mtbRPG.setInfo("Welcome to the USA!\n  ");
             mtbRPG.setCheckpoint(1);
-            mtbRPG.mainMenu(false, false);
+        case 1: //USA Map Checkpoint
+            mtbRPG.map();
+            system("clear");
+            mtbRPG.levelUP();
+            mtbRPG.printStatus(mtbRPG.getPlayer());
+            cout << "WOW! You've climbed up the ladder and won the most competative race the United States has to offer!\n\nNow it's time to really test your skills and go overseas!\nPress any key when you are ready to go!\n";
+            mtbRPG.continueGame();
+            system("clear");
+            mtbRPG.setInfo("Welcome to Europe!\n  ");
+            mtbRPG.setCheckpoint(2);
+        case 2: //Europe Map Checkpoint
+            mtbRPG.map();
     }
     system("clear");
 

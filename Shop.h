@@ -29,16 +29,17 @@ class Shop {
     public:
         Shop();
 
-        string cart(Racer cart, Racer player, int cart_tires);
+        string cart(Racer cart, Racer player, int cursor);
 
-        int getSnackPrice();
-        int getToolPrice();
-        int getTirePrice();
+        double getSnackPrice();
+        double getToolPrice();
+        double getTirePrice();
 
         int getMultiplier();
-        void changeMultiplier();
+        void changeMultiplier(int multiplier);
 
-        vector<Items> displayInventory(int category);
+        vector<Items> getInventory(int category);
+        string displayInventory(int category, int cursor);
 
         int readInventory(string filename);
 };

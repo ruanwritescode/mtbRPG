@@ -103,7 +103,7 @@ string menuBox(string prompt, bool justification) {
         output += "-";
     }
     output += "+";
-    return output + "\n";
+    return output;
 }
 
 
