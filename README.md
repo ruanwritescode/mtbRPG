@@ -4,11 +4,15 @@ A game created in C++. Using the terminal as an input/output interface, this gam
 
 ## HOW TO COMPILE AND RUN
 
-Compile: g++ -std=c++17 Game.cpp Items.cpp Map.cpp Minigame.cpp Racer.cpp Shop.cpp mtbRPG.cpp -o mtbRPG  
+1. Navigate to the build folder in the terminal  
+2. Compile: g++ -std=c++17 Game.cpp Items.cpp Map.cpp Minigame.cpp Racer.cpp Shop.cpp mtbRPG.cpp -o mtbRPG  
+3. Run: ./mtbRPG  
 
-Run: ./mtbRPG  
+Once Running:  
+When you have the program started, there is a mechanic that allows you, at any point, to restart the game with the "esc" key. This will recompile the code from within and automatically re-run.  
 
-Once Running: When you have the program started, there is a mechanic that allows you, at any point, to restart the game with the "esc" key. This will recompile the code from within and automatically run. To fully terminate the program. Restart, then use the "Terminate" option on the opening menu screen.
+To fully terminate the program:  
+Restart, then use the "Terminate" option on the menu screen.
 
 ## DEPENDENCIES
 
