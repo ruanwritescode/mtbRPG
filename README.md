@@ -3,8 +3,8 @@ A game created in C++. Using the terminal as an input/output interface, this gam
 ------------------------
 HOW TO COMPILE AND RUN
 ------------------------
-Compile: g++ -std=c++17 Game.cpp Items.cpp Map.cpp Minigame.cpp Racer.cpp Shop.cpp mtbRPG.cpp -o mtbRPG
-Run: ./mtbRPG
+Compile: g++ -std=c++17 Game.cpp Items.cpp Map.cpp Minigame.cpp Racer.cpp Shop.cpp mtbRPG.cpp -o mtbRPG\
+Run: ./mtbRPG\
 Once Running: When you have the program started, there is a mechanic that allows you, at any point, to restart the game with the "esc" key. This will recompile the code from within and automatically run. To fully terminate the program. Restart, then use the "Terminate" option on the opening menu screen.
 ------------------------
 DEPENDENCIES
@@ -32,15 +32,15 @@ mtbRPG -\
     * saves -
         * savelist.txt
 
-**NOTE ABOUT SAVES**
+**NOTE ABOUT SAVES**\
 If you do not have a "saves" folder, or "savelist.txt" file. The program will automatically create one for you. To clear all save history, simply delete the "saves" folder.
 ------------------------
 SUBMISSION INFORMATION
 ------------------------
-CSCI1300 Fall 2022 Final Project
-Author: Ruan Abarbanel
-Recitation: 103 - Ojasvi Bhalerao
-Date: Nov 30, 2022
+CSCI1300 Fall 2022 Final Project\
+Author: Ruan Abarbanel\
+Recitation: 103 - Ojasvi Bhalerao\
+Date: Nov 30, 2022\
 
 ------------------------
 ABOUT THIS PROJECT
@@ -61,7 +61,9 @@ You must navigate a map of the United States to get to randomly generated race l
 Don't have enough points to enter? Simply find a random race at any point to earn points and money to help keep yourself and your bike in good condition.
 
 **The Races**
+
 Each race will have a variable length that gets longer the more difficult they get! You will be presented with a choice of action that determines the stats being used and your overall bike health. Choose the options where you have the highest stats to be most successful! If your split time is positive at the end, you win! If your in the red, each race will calculate your position for second, third, or no podium at all. Each position will determine the number of points you earn and the amount of money you win. If you win a race, that race gets deleted from the database and is no longer avialbe for future races.
 
 **Beating The Game**
+
 Complete all the races on the map to compete in the final race. If you win this one, you've done it! Although there may be a little bonus event afterwards...
