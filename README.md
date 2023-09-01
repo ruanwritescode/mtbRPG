@@ -46,14 +46,17 @@ Date: Nov 30, 2022
 ABOUT THIS PROJECT
 ------------------------
 **The Overview**
+
 This program simulates a mountain biker's journey to prepare, compete, and earn points to qualify for more difficult, more competative races. At the start you are given an allowance by your "sponsors" to purchase bike parts and build up a complete bike to use when racing. Complete all the avialable races on the map and you can qualify to race in the final race! If you beat this, get ready to preform on an even bigger stage.
 
 **The Player**
+
 Your player has stats that determine your success in each race you do. Low strength, skill, endurance, or mental stats will result in closer split times and potentially lost races.
 Your bike parts also have health bars that perform a similar function when racing! Make sure to repair them with toolkits from the shop to guarantee a better result in races.
 You will also have the opportuntiy to buy snacks, toolkits, and tires in the shop. These consumable items help boost your stats and prevent your bike from falling into disrepair.
 
 **The Map**
+
 You must navigate a map of the United States to get to randomly generated race locations on the map. These visible races require a minimum number of points to participate and this goes up with every race you complete!
 Don't have enough points to enter? Simply find a random race at any point to earn points and money to help keep yourself and your bike in good condition.
 
