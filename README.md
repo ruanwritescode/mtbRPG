@@ -4,7 +4,7 @@ A game created in C++. Using the terminal as an input/output interface, this gam
 
 ## HOW TO COMPILE AND RUN
 
-1. Navigate to the build folder in the terminal  
+1. Navigate to the "build" folder from the terminal  
 2. Compile: g++ -std=c++17 Game.cpp Items.cpp Map.cpp Minigame.cpp Racer.cpp Shop.cpp mtbRPG.cpp -o mtbRPG  
 3. Run: ./mtbRPG  
 
