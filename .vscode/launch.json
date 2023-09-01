@@ -12,7 +12,7 @@
             "debug"
         ],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}../",
+            "cwd": "${fileDirname}",
             "environment": [],
             "externalConsole": true,
             "MIMode": "lldb",

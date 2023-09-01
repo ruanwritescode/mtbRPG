@@ -48,7 +48,7 @@ void Map::resetMap(string zone)
 
     ifstream mapin;
     char map_point;
-    mapin.open("../maps/" + zone + ".txt");
+    mapin.open("./maps/" + zone + ".txt");
     int rise = 0;
     int run = 0;
     if(!mapin.fail()) {
