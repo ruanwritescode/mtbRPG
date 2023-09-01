@@ -9,21 +9,21 @@ Once Running: When you have the program started, there is a mechanic that allows
 ------------------------
 DEPENDENCIES
 ------------------------
-Dependent .h files in the main directory
-funcs.h
-Game.h
-Items.h
-Map.h
-Minigame.h
-Racer.h
-Shop.h
-
-All txt files should be kept in their respective directories off the main directory as follows
-
-mtbRPG -
-    maps -
-        empty.txt
-        europe.txt
+Dependent .h files in the main directory\
+funcs.h\
+Game.h\
+Items.h\
+Map.h\
+Minigame.h\
+Racer.h\
+Shop.h\
+\
+All txt files should be kept in their respective directories off the main directory as follows\
+\
+mtbRPG -\
+    maps -\
+        empty.txt\
+        europe.txt\
         usa.txt
     races -
         starts.txt
