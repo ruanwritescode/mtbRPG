@@ -70,7 +70,7 @@ Don't have enough points to enter? Simply find a random race at any point to ear
 
 **The Races**
 
-Each race will have a variable length that gets longer the more difficult they get! You will be presented with a choice of action that determines the stats being used and your overall bike health. Choose the options where you have the highest stats to be most successful! If your split time is positive at the end, you win! If your in the red, each race will calculate your position for second, third, or no podium at all. Each position will determine the number of points you earn and the amount of money you win. If you win a race, that race gets deleted from the database and is no longer avialbe for future races.
+Each race will have a variable length that gets longer the more difficult they get! You will be presented with a choice of action that determines the stats being used and your overall bike health. Choose the options where you have the highest stats to be most successful! If your split time is positive at the end, you win! If you're in the red, each race will calculate your position for second, third, or no podium at all. Each position will determine the number of points you earn and the amount of money you win. If you win a race, that race gets deleted from the database and is no longer avialbe for future races.
 
 **Beating The Game**
 
