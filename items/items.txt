@@ -1,7 +1,7 @@
 Commencal Supreme V5,3000,100
 Pivot Phoenix,2850,90
 Specialized Demo,2850,80
-Canyon Sender,2700,70
+Intense M1,2700,70
 Santa Cruz V10,2550,60
 
 FOX Factory,1500,100

@@ -17,7 +17,7 @@ describe('data files', () => {
   });
 
   it('parses the shop inventory', () => {
-    expect(data.shop.parts.frame[0]).toEqual({ name: 'Commencal Supreme V5', price: 3000, quality: 100, max: 100 });
+    expect(data.shop.parts.frame[0]).toMatchObject({ name: 'Commencal Supreme V5', price: 3000, quality: 100, max: 100 });
     for (const list of Object.values(data.shop.parts)) expect(list).toHaveLength(5);
   });
 
@@ -30,6 +30,38 @@ describe('data files', () => {
     expect(data.terrain[4].options).toEqual([{ label: 'Hold on tight!', tag: 'Bike', modifier: 'bike' }]);
     expect(data.terrain[6].options.map((o) => o.label)).toEqual(['Send It!', 'Chicken Line']);
     expect(data.starts).toHaveLength(4);
+  });
+});
+
+describe('part attributes', () => {
+  it('rates every shop part and the tire on four 1-10 attributes', () => {
+    for (const list of Object.values(data.shop.parts)) {
+      for (const part of list) {
+        expect(part.attrs, part.name).toBeDefined();
+        for (const v of Object.values(part.attrs!)) expect(v).toBeGreaterThanOrEqual(1);
+      }
+    }
+    expect(data.attrs['Tire']).toBeDefined();
+  });
+
+  it('gives the frames distinct characters', () => {
+    const f = Object.fromEntries(data.shop.parts.frame.map((p) => [p.name, p.attrs!]));
+    expect(f['Commencal Supreme V5'].speed).toBeGreaterThan(f['Santa Cruz V10'].speed);
+    expect(f['Santa Cruz V10'].playfulness).toBeGreaterThan(f['Commencal Supreme V5'].playfulness);
+    expect(f['Pivot Phoenix'].lightness).toBeGreaterThan(f['Commencal Supreme V5'].lightness);
+  });
+
+  it('averages the bike and makes a playful bike more forgiving', () => {
+    const s = G.createGame('A', data, seededRng(7));
+    const cart = G.emptyCart();
+    cart.parts = { frame: 0, suspension: 0, brakes: 0, wheels: 0 };
+    G.checkout(s, data, cart);
+    const a = G.bikeAttrs(s.player);
+    expect(a.speed).toBeGreaterThanOrEqual(9);
+    s.player.strength = 30;
+    const stiff = G.crashRisk(s.player, 'strength', 7);
+    for (const slot of ['frame', 'suspension', 'brakes', 'wheels'] as const) s.player.parts[slot]!.attrs = { speed: 6, durability: 6, playfulness: 10, lightness: 6 };
+    expect(G.crashRisk(s.player, 'strength', 7)).toBeLessThan(stiff);
   });
 });
 

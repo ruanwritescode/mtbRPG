@@ -51,6 +51,21 @@ URL, or a product page whose `og:image` is used). The shipped photos were then c
 `shopify-search.mjs` help find product images on brand and retailer sites. The photos are manufacturers' and
 retailers' product shots; check the licence of anything you ship.
 
+## Part attributes
+
+`items/attributes.txt` rates every part (and the tire) from 1 to 10 on four attributes, shown in the game as
+five dots with half dots. The C++ game ignores the file.
+
+| Attribute | In a race |
+| --- | --- |
+| Speed | Turns a good line into more time gained (and softens a bad one) |
+| Durability | Parts lose less health per section |
+| Playfulness | Lower injury-crash risk, and a small bonus on skill lines |
+| Lightness | Using a stat tires the rider less |
+
+The bike's rating is the average of its four parts and shows in the rider bar. An average rating (6) changes
+nothing, so the base balance is unchanged.
+
 ## Differences from the terminal game
 
 The formulas follow the C++ code. These changes fix crashes, keep the game finishable, or come from playtesting:

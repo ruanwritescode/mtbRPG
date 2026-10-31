@@ -4,7 +4,9 @@
 import { isLand, type GameData, type Terrain } from './parse';
 import type { Rng } from './rng';
 import {
+  ATTR_NAMES,
   PART_SLOTS,
+  type Attrs,
   type GameState,
   type MapState,
   type Part,
@@ -251,6 +253,26 @@ export function modStat(r: Racer, stat: StatName, rate: number) {
   r[stat] = Math.trunc(next);
 }
 
+export const DEFAULT_ATTRS: Attrs = { speed: 6, durability: 6, playfulness: 6, lightness: 6 };
+
+export function partAttrs(p: Part | null | undefined): Attrs {
+  return p?.attrs ?? DEFAULT_ATTRS;
+}
+
+/** The bike's ride attributes: the average of its four parts (a missing part counts as average). */
+export function bikeAttrs(r: Racer): Attrs {
+  const out = { ...DEFAULT_ATTRS };
+  for (const k of ATTR_NAMES) {
+    out[k] = Math.round((PART_SLOTS.reduce((sum, slot) => sum + partAttrs(r.parts[slot])[k], 0) / PART_SLOTS.length) * 2) / 2;
+  }
+  return out;
+}
+
+/** Multiplier from an attribute: 1 at an average (6) rating, ±`per` for each point above or below. */
+function attrFactor(value: number, per: number): number {
+  return 1 + (value - 6) * per;
+}
+
 export function bikeHealth(r: Racer): number {
   const sum = PART_SLOTS.reduce((s, slot) => s + (r.parts[slot]?.quality ?? 0), 0);
   return Math.trunc(sum / 4);
@@ -371,12 +393,13 @@ export function turningPoint(level: number): number {
  * original only had a flat 1% bad-luck crash, which is still there and never injures.)
  */
 export function crashRisk(r: Racer, modifier: string, level: number): number {
+  const forgiving = attrFactor(bikeAttrs(r).playfulness, -0.06); // a playful bike is more forgiving
   if (modifier === 'strength' || modifier === 'skill' || modifier === 'endurance') {
     const tp = turningPoint(level);
-    return Math.max(0, (tp - r[modifier]) / tp) * 0.3;
+    return Math.max(0, (tp - r[modifier]) / tp) * 0.3 * forgiving;
   }
   if (modifier === 'bike') {
-    return Math.max(0, (30 - bikeHealth(r)) / 30) * 0.2;
+    return Math.max(0, (30 - bikeHealth(r)) / 30) * 0.2 * forgiving;
   }
   return 0;
 }
@@ -407,20 +430,26 @@ export function rideSection(state: GameState, data: GameData, s: RaceSession, ch
   };
   const errorRoll = rng.int(1000) < out.risk * 1000;
 
-  let rate = (15 + rng.int(10)) / 100;
+  const bike = bikeAttrs(p);
+  // A light bike tires the rider less; a fast one turns the same effort into more time.
+  let rate = ((15 + rng.int(10)) / 100) * attrFactor(bike.lightness, -0.04);
   const mentalEffect = p.mental / 100;
   const dial = split % 10000;
   let tp = turningPoint(level);
   if (modifier === 'strength' || modifier === 'skill' || modifier === 'endurance') {
     const before = p[modifier];
     modStat(p, modifier, -rate);
-    s.gap = Math.trunc(s.gap + dial * mentalEffect * (p[modifier] / tp - 1));
+    let delta = dial * mentalEffect * (p[modifier] / tp - 1);
+    delta *= delta > 0 ? attrFactor(bike.speed, 0.03) : attrFactor(bike.speed, -0.02);
+    if (modifier === 'skill') delta += Math.abs(dial) * (bike.playfulness - 6) * 0.004; // playful bikes shine on skill lines
+    s.gap = Math.trunc(s.gap + delta);
     out.stat = { name: modifier, before, after: p[modifier] };
   } else if (modifier === 'time') {
     s.gap -= 750;
   }
 
-  rate = (5 + rng.int(level * 5)) / 100;
+  // Durable parts wear more slowly.
+  rate = ((5 + rng.int(level * 5)) / 100) * attrFactor(bike.durability, -0.05);
   const hit = rng.int(4);
   const slots: PartSlot[] = modifier === 'bike' ? PART_SLOTS : [PART_SLOTS[hit]];
   for (const slot of slots) {

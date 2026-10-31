@@ -16,11 +16,22 @@ export const STAT_LABELS: Record<StatName, string> = {
   mental: 'Mental',
 };
 
+/** How a part rides, each 1–10 (shown as five dots, half dots possible). */
+export interface Attrs {
+  speed: number;
+  durability: number;
+  playfulness: number;
+  lightness: number;
+}
+export const ATTR_NAMES: (keyof Attrs)[] = ['speed', 'durability', 'playfulness', 'lightness'];
+export const ATTR_LABELS: Record<keyof Attrs, string> = { speed: 'Speed', durability: 'Durability', playfulness: 'Playfulness', lightness: 'Lightness' };
+
 export interface Part {
   name: string;
   price: number;
   quality: number;
   max: number;
+  attrs?: Attrs;
 }
 
 export interface Racer {

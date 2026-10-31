@@ -1,5 +1,5 @@
 // Parsers for the original game's text data files.
-import type { Part, PartSlot, Point } from './types';
+import type { Attrs, Part, PartSlot, Point } from './types';
 
 export interface Terrain {
   width: number;
@@ -30,6 +30,8 @@ export interface ShopInventory {
 export interface GameData {
   maps: { usa: Terrain; europe: Terrain };
   shop: ShopInventory;
+  /** Ride attributes by item name (items/attributes.txt). */
+  attrs: Record<string, Attrs>;
   raceList: { name: string; level: number }[];
   terrain: TerrainFeature[];
   starts: string[];
@@ -86,6 +88,19 @@ export function parseItems(raw: string): ShopInventory {
       wheels: sections[3] ?? [],
     },
   };
+}
+
+/** items/attributes.txt: `name,speed,durability,playfulness,lightness`, values 1–10; `#` lines are comments. */
+export function parseAttributes(raw: string): Record<string, Attrs> {
+  const out: Record<string, Attrs> = {};
+  for (const line of lines(raw)) {
+    if (!line.trim() || line.startsWith('#')) continue;
+    const b = line.split(',').map((x) => x.trim());
+    if (b.length !== 5) continue;
+    const n = b.slice(1).map((x) => Math.max(1, Math.min(10, parseInt(x, 10) || 6)));
+    out[b[0]] = { speed: n[0], durability: n[1], playfulness: n[2], lightness: n[3] };
+  }
+  return out;
 }
 
 export function parseRaceList(raw: string): { name: string; level: number }[] {

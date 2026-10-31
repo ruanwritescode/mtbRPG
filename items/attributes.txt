@@ -1,0 +1,36 @@
+# Part attributes for the web game, one line per item: name,speed,durability,playfulness,lightness
+# Each value is 1-10 and shows as 5 dots (half dots possible), so 7 = 3.5 dots.
+# speed: how fast it is on a race track. durability: how much abuse it takes before it wears.
+# playfulness: how lively and forgiving it feels on jumps, corners and tech. lightness: more dots = lighter.
+# The C++ game ignores this file.
+
+# Frames
+Commencal Supreme V5,10,9,5,4
+Pivot Phoenix,9,8,8,9
+Specialized Demo,9,9,6,5
+Intense M1,9,7,7,8
+Santa Cruz V10,8,8,9,8
+
+# Suspension (forks)
+FOX Factory,10,9,8,7
+OHLINS M.2,9,8,7,7
+SRAM ULTIMATE,9,8,9,8
+DVO ONYX and Jade,8,9,7,6
+SR Suntour,7,8,6,6
+
+# Brakes
+TRP DH-R Evo,9,9,7,6
+TRICKSTUFF Maxima,10,8,9,7
+SHIMANO XT,8,8,7,8
+SRAM Code RSC,8,8,8,7
+MAGURA MT7 Pro,9,7,8,9
+
+# Wheels
+I9 Grade 300 Hydra,8,10,9,5
+CRANKBROS Synthesis,9,8,9,8
+SANTA CRUZ Reserve,9,9,8,7
+DT SWISS FR 1500,8,9,7,6
+Stans Flow MK4,7,8,8,7
+
+# Supplies
+Tire,8,8,9,5

@@ -4,12 +4,15 @@ import { isLand } from '../engine/parse';
 import { mathRng as rng } from '../engine/rng';
 import * as G from '../engine/game';
 import {
+  ATTR_LABELS,
+  ATTR_NAMES,
   PART_LABELS,
   PART_SLOTS,
   STAT_LABELS,
   STAT_NAMES,
   ZONE_LABELS,
   type GameState,
+  type Attrs,
   type PartSlot,
   type Point,
   type RaceKind,
@@ -664,6 +667,7 @@ export class App {
         <li>A stat above the race’s pace gains time, below it loses time. Using a stat tires it out.</li>
         <li>Riding a line your stats can’t handle risks a crash that <b>injures</b> you. Three injuries end your career.</li>
         <li>Bike health matters most: keep parts above 30% with toolkits (<kbd>3</kbd>). Snacks (<kbd>2</kbd>) restore your stats.</li>
+        <li>Parts are rated out of five dots: <b>Speed</b> turns effort into time, <b>Durability</b> slows wear, <b>Playfulness</b> makes crashes less likely and helps on skill lines, <b>Lightness</b> tires you out less.</li>
         <li>Tires wear one tread per section. Run out mid-race and you flat.</li></ul>
         <h4>Money and sponsors</h4>
         <ul><li>Entry fees can put you in debt. If you’re broke and can’t race, one of your three sponsors can bail you out — once each.</li>
@@ -823,6 +827,18 @@ export class App {
     return `<div class="bar ${cls}"><span style="width:${pct}%"></span>${t}</div>`;
   }
 
+  /** Five dots for a 1–10 rating, half dots for odd values. */
+  private dots(value: number, label?: string): string {
+    const v = Math.max(0, Math.min(10, Math.round(value)));
+    const pips = Array.from({ length: 5 }, (_, i) => `<i class="${v >= (i + 1) * 2 ? 'full' : v === i * 2 + 1 ? 'half' : ''}"></i>`).join('');
+    return `<span class="dots" role="img" aria-label="${label ? label + ' ' : ''}${v / 2} out of 5">${pips}</span>`;
+  }
+
+  /** Four rating blocks (label over five dots). */
+  private attrRows(a: Attrs, cls = ''): string {
+    return `<div class="attrs ${cls}">${ATTR_NAMES.map((k) => `<span><em>${ATTR_LABELS[k]}</em>${this.dots(a[k], ATTR_LABELS[k])}</span>`).join('')}</div>`;
+  }
+
   /** A product photo when one exists, otherwise the drawn icon. */
   private itemArt(kind: ItemKind, name: string, size: number): string {
     const url = partImage(name);
@@ -863,6 +879,7 @@ export class App {
           <div><div class="rider-name">${esc(p.name)}</div><div class="rider-sub">${g.level ? levelBadge(g.level) : '<span class="badge">Rookie</span>'}${gate ? `<span class="muted"> · ${gate}</span>` : ''}</div></div></div>
         <div class="hud-kpi"><span>Sponsors</span>${pips(g.sponsors, G.START_SPONSORS, 'sponsor')}<small>${g.sponsors} left</small></div>
         <div class="hud-kpi"><span>Injuries</span>${pips(p.injuries, G.MAX_INJURIES, 'injury')}<small>${G.MAX_INJURIES - p.injuries} to go</small></div>
+        <div class="hud-ride" title="How your bike rides: the average of its four parts">${this.attrRows(G.bikeAttrs(p), 'compact')}</div>
         <div class="hud-supply" title="Spare tires, snacks and toolkits">
           <span>${this.itemArt('tires', 'Tire', 26)}<b>${Math.max(0, p.tires.length - 1)}</b></span>
           <span>${this.itemArt('snacks', 'Snack', 26)}<b>${p.snacks}</b></span>
@@ -960,6 +977,7 @@ export class App {
         return `<div class="srow ${this.cart[what] ? 'selected' : ''}">${this.itemArt(what, label, 56)}
           <div><div class="name">${label}</div><div class="sub">${note} You have ${have}/${max}.</div></div>
           <div class="price">${money(G.priceAt(G.UNIT_PRICES[what], lvl))}</div>
+          ${what === 'tires' && data.attrs['Tire'] ? this.attrRows(data.attrs['Tire'], 'row') : ''}
           <div class="stepper"><button class="btn plain small" data-act="qty" data-what="${what}" data-d="-1" data-key="${what}-" ${this.cart[what] ? '' : 'disabled'} aria-label="Fewer">−</button><output>${this.cart[what]}</output><button class="btn plain small" data-act="qty" data-what="${what}" data-d="1" data-key="${what}+" ${this.cart[what] < left ? '' : 'disabled'} aria-label="More">+</button></div>
         </div>`;
       }).join('');
@@ -969,9 +987,10 @@ export class App {
       items = data.shop.parts[slot].map((it, i) => {
         const isOwned = owned?.name === it.name;
         const inCart = this.cart.parts[slot] === i;
-        return `<div class="srow ${inCart ? 'selected' : ''} ${isOwned ? 'owned' : ''}">${this.itemArt(slot as ItemKind, it.name, 56)}
+        return `<div class="srow ${inCart ? 'selected' : ''} ${isOwned ? 'owned' : ''}">${this.itemArt(slot as ItemKind, it.name, 64)}
           <div><div class="name">${esc(it.name)}</div><div class="sub">${isOwned ? `On your bike · ${owned!.quality}/${owned!.max} health` : `Health ${it.max}`}</div></div>
           <div class="price">${money(G.priceAt(it.price, lvl))}</div>
+          ${it.attrs ? this.attrRows(it.attrs, 'row') : ''}
           <button class="btn ${inCart ? 'primary' : 'plain'} small" data-act="part" data-slot="${slot}" data-i="${i}" data-key="${slot}-${i}" ${isOwned ? 'disabled' : ''} aria-pressed="${inCart}">${isOwned ? 'Owned' : inCart ? '✓ In cart' : 'Add'}</button>
         </div>`;
       }).join('');

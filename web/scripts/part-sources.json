@@ -1,9 +1,8 @@
 {
-  "_comment": "Item name -> image URL. Brand stores and Worldwide Cyclery product photos; processed by scripts (background flood-filled to transparent, trimmed, WebP). Items renamed to parts with photos: Trek Session -> Pivot Phoenix, DT Swiss FR 1950 -> FR 1500, E13 LG1+ -> Stan's Flow MK4. Canyon Sender is the 2021 Sender CFR; the snack is a Hammer Bar.",
+  "_comment": "Item name -> image URL. Brand stores and Worldwide Cyclery product photos; processed by scripts (background flood-filled to transparent, trimmed, WebP). Items renamed to parts with photos: Trek Session -> Pivot Phoenix, Canyon Sender -> Intense M1 (Canyon does not sell the Sender as a frame), DT Swiss FR 1950 -> FR 1500, E13 LG1+ -> Stan's Flow MK4. the snack is a Hammer Bar.",
   "Commencal Supreme V5": "https://www.commencal.com/dw/image/v2/BFNN_PRD/on/demandware.static/-/Sites-commencal-master/default/images/23CSUP1_2000.jpg?sw=1400",
   "Pivot Phoenix": "https://cdn.shopify.com/s/files/1/0576/7954/4474/files/00PHXV5---FRM--BLGLG---ZN.png?v=1787258488&width=1400",
-  "Specialized Demo": "https://resources.specialized.com/image/94523-10_DEMO-RACE-MNSHDW-MNSHDWMET-VLTGSTPRL_HERO-SQUARE?q=80&w=1400&fit=max&fm=png",
-  "Canyon Sender": "https://www.canyon.com/dw/image/v2/BCML_PRD/on/demandware.static/-/Sites-canyon-master/default/dwdec537ce/images/full/full_2021_/2021/full_2021_sender-cfr_2251_bk-bk_P5.png?sw=1400&sfrm=png",
+  "Specialized Demo": "https://resources.specialized.com/image/74524-70_DEMO-RACE-FRM-REDSKY-WHT_HERO-SQUARE?q=80&w=1400&fit=max&fm=png",
   "Santa Cruz V10": "https://cdn.shopify.com/s/files/1/0897/4355/6890/files/MY27_V10_CC_FactoryDHX2_FrameOnly_GlossLiquidBlue.png?v=1767915021&width=1400",
   "FOX Factory": "https://cdn.shopify.com/s/files/1/0681/2162/4800/files/FOX40_1600x1600_ec89aef8-4df1-4635-a8f3-10c6b31753c5.png?v=1789676764&width=1200",
   "OHLINS M.2": "https://cdn.shopify.com/s/files/1/0349/7357/files/FK5127.jpg?v=1758590419&width=1200",
@@ -22,5 +21,6 @@
   "Stans Flow MK4": "https://cdn.shopify.com/s/files/1/0349/7357/files/WE3679.jpg?v=1763589609&width=1200",
   "Tire": "https://cdn.shopify.com/s/files/1/0349/7357/files/TR1341_64bd8f15-5707-4b60-a93e-fb7c292520d7.jpg?v=1730284133&width=1200",
   "Snack": "https://cdn.shopify.com/s/files/1/0349/7357/files/EB4201.jpg?v=1730403173&width=1200",
-  "Toolkit": "https://cdn.shopify.com/s/files/1/0349/7357/files/TL5360.jpg?v=1730355843&width=1200"
+  "Toolkit": "https://cdn.shopify.com/s/files/1/0349/7357/files/TL5360.jpg?v=1730355843&width=1200",
+  "Intense M1": "https://cdn.shopify.com/s/files/1/2426/4557/files/M1-red_5528f9cd-a934-48cd-813b-a78d5b9bd6a4.png?v=1779764463&width=1400"
 }
