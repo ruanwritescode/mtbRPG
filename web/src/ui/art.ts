@@ -662,8 +662,8 @@ export function itemIcon(kind: ItemKind, size = 40): string {
 type Placement = [StickerName, number, number, number, number, ...string[]];
 
 const LANDSCAPE: Placement[] = [
-  ['wrench', 330, 100, 15, 0.9], ['rotor', 620, 64, 10, 0.8], ['badge', 870, 80, -8, 0.9], ['pin', 1080, 110, 10, 0.8],
-  ['shock', 120, 60, -10, 0.8], ['wheel', 1130, 240, 8, 0.7],
+  ['wrench', 330, 100, 15, 0.9], ['rotor', 620, 92, 10, 0.8], ['badge', 870, 80, -8, 0.9], ['pin', 1080, 110, 10, 0.8],
+  ['shock', 130, 100, -10, 0.8], ['wheel', 1130, 240, 8, 0.7],
   ['tire', 130, 210, -15, 1], ['snack', 130, 390, 0, 1], ['sign', 110, 560, -6, 0.9, 'circle'], ['frame', 250, 620, 0, 2.9],
   ['trophy', 1040, 250, 8, 1.1], ['flag', 1130, 400, 0, 1, '#1F6FD1'], ['cash', 1030, 520, 0, 1], ['wheel', 1090, 660, 12, 1],
   ['shock', 430, 690, 0, 0.9], ['helmet', 600, 690, -10, 0.8], ['sign', 780, 680, 5, 0.85, 'diamond'], ['checkered', 930, 660, 6, 0.9],
@@ -672,7 +672,7 @@ const LANDSCAPE: Placement[] = [
 const PORTRAIT: Placement[] = [
   ['wrench', 190, 90, 15, 0.8], ['trophy', 330, 120, 8, 0.9], ['rotor', 480, 70, 10, 0.7], ['badge', 610, 120, -8, 0.8],
   ['tire', 170, 250, -15, 0.8], ['flag', 640, 270, 0, 0.8, '#1F6FD1'], ['pin', 165, 400, 10, 0.6], ['snack', 640, 420, 0, 0.75],
-  ['frame', 300, 930, 0, 2.2], ['cash', 430, 880, 0, 0.8], ['wheel', 600, 940, 12, 0.8],
+  ['frame', 300, 950, 0, 2.2], ['cash', 430, 880, 0, 0.8], ['wheel', 600, 940, 12, 0.8],
   ['shock', 350, 1040, 0, 0.8], ['helmet', 500, 1050, -10, 0.7], ['sign', 630, 1070, 5, 0.75, 'diamond'], ['checkered', 190, 1070, 6, 0.7],
 ];
 
@@ -680,16 +680,19 @@ const PORTRAIT: Placement[] = [
 const PHOTO_SLOTS: StickerName[] = ['frame', 'shock', 'rotor', 'wheel', 'tire', 'snack', 'wrench'];
 
 function stickerLayer(id: string, places: Placement[], vw: number, vh: number): string {
-  const photos = allPartImages();
-  // Spread the photos over the part-shaped slots, cycling so every photo gets used across both layouts.
-  let photoIndex = id === 'port' ? Math.floor(photos.length / 2) : 0;
+  // Frames first so they land in the big frame slot; the portrait layout starts further along the list.
+  const photos = allPartImages().sort((x, y) => Number(/demo|sender|v10|phoenix|commencal/.test(y.slug)) - Number(/demo|sender|v10|phoenix|commencal/.test(x.slug)));
+  const rest = photos.slice(1);
+  let photoIndex = id === 'port' ? Math.floor(rest.length / 2) : 0;
   const items = places.map(([name, x, y, rot, scale, ...args]) => {
     const fn = stickers[name] as (...a: string[]) => string;
     let body = fn(...args);
     if (photos.length && PHOTO_SLOTS.includes(name)) {
-      const photo = photos[photoIndex++ % photos.length];
-      const size = name === 'frame' ? 130 : 96;
-      body = `<image href="${photo.url}" x="${-size / 2}" y="${-size / 2}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`;
+      // The big frame slot always shows a frame; the other slots cycle through the rest.
+      const photo = name === 'frame' ? photos[id === 'port' && photos.length > 1 ? 1 : 0] : rest.length ? rest[photoIndex++ % rest.length] : photos[0];
+      // Photos get a fixed footprint on screen whatever the slot's scale: big for the frame slot, medium elsewhere.
+      const size = (name === 'frame' ? 240 : 150) / scale;
+      body = `<image href="${photo.url}" x="${r1(-size / 2)}" y="${r1(-size / 2)}" width="${r1(size)}" height="${r1(size)}" preserveAspectRatio="xMidYMid meet"/>`;
     }
     return `<g filter="url(#sticker-${id})" transform="translate(${x} ${y}) rotate(${rot}) scale(${scale})">${body}</g>`;
   }).join('');

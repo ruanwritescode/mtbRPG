@@ -1,5 +1,5 @@
 Commencal Supreme V5,3000,100
-Trek Session,2850,90
+Pivot Phoenix,2850,90
 Specialized Demo,2850,80
 Canyon Sender,2700,70
 Santa Cruz V10,2550,60
@@ -19,8 +19,8 @@ MAGURA MT7 Pro,400,60
 I9 Grade 300 Hydra,1000,100
 CRANKBROS Synthesis,900,90
 SANTA CRUZ Reserve,800,80
-DT SWISS FR 1950,700,70
-E13 LG1+,600,60
+DT SWISS FR 1500,700,70
+Stans Flow MK4,600,60
 
 Downhill,80,10
 Enduro,70,8

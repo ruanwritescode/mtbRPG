@@ -45,8 +45,11 @@ the item's slug (`commencal-supreme-v5.png`, `fox-factory.png`, `tire.png`, `sna
 see `slug()` in `src/ui/partImages.ts`). Anything without a photo falls back to the drawn icon. PNGs with
 a transparent background look best, because the title screen cuts a white sticker edge around the alpha.
 
-`node scripts/fetch-parts.mjs` downloads them from the pages listed in `scripts/part-sources.json`
-(an image URL, or a product page whose `og:image` is used). Check the licence of anything you ship.
+`node scripts/fetch-parts.mjs` downloads them from the URLs listed in `scripts/part-sources.json` (an image
+URL, or a product page whose `og:image` is used). The shipped photos were then cut out with ImageMagick
+(corner flood-fill to transparent, trim, resize to 900 px, WebP). `scripts/probe.mjs`, `shopify-find.mjs` and
+`shopify-search.mjs` help find product images on brand and retailer sites. The photos are manufacturers' and
+retailers' product shots; check the licence of anything you ship.
 
 ## Differences from the terminal game
 

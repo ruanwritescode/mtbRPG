@@ -15,7 +15,7 @@ const only = process.argv.slice(2);
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 function curl(url, binary = false) {
-  const args = ['-sSL', '--max-time', '40', '-A', UA, url];
+  const args = ['-sSL', '--max-time', '40', '-A', UA, url.replace(/^http:/, 'https:')];
   return execFileSync('curl', args, { maxBuffer: 50e6, encoding: binary ? 'buffer' : 'utf8' });
 }
 function slug(name) {
