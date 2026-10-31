@@ -16,7 +16,7 @@ import {
   type RaceSession,
   type StatName,
 } from '../engine/types';
-import { levelBadge, sectionScene, signIcon, startScene, titleBackground } from './art';
+import { itemIcon, levelBadge, sectionScene, signIcon, startScene, titleBackground, type ItemKind } from './art';
 import { esc, money, ordinal, seconds } from './dom';
 import { cellFromEvent, mapSvg } from './mapSvg';
 import * as Save from './save';
@@ -55,11 +55,9 @@ export class App {
   private toast: string | null = null;
   private toastTimer: number | null = null;
   private firstShop = false;
-  /** Which HUD sections are expanded; collapsed by default on phones so the map stays in view. */
-  private hudOpen: Record<string, boolean> = (() => {
-    const wide = !window.matchMedia?.('(max-width: 820px)').matches;
-    return { rider: wide, bike: wide };
-  })();
+  /** Whether the stat meters are expanded; collapsed by default on phones so the map stays in view. */
+  private metersOpen = !window.matchMedia?.('(max-width: 820px)').matches;
+  private shopCat: ItemKind | 'supplies' = 'frame';
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -69,7 +67,7 @@ export class App {
       'toggle',
       (e) => {
         const el = e.target as HTMLDetailsElement;
-        if (el.dataset?.sec) this.hudOpen[el.dataset.sec] = el.open;
+        if (el.dataset?.sec === 'meters') this.metersOpen = el.open;
       },
       true,
     );
@@ -146,8 +144,9 @@ export class App {
 
   private onClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
-    if (target.classList.contains('modal-backdrop') && this.modal?.cancel) {
-      this.modal.cancel();
+    if (target.classList.contains('modal-backdrop')) {
+      if (this.modal?.cancel) this.modal.cancel();
+      else if (this.screen === 'shop' && !this.modal) this.leaveShop();
       return;
     }
     const svg = target.closest<SVGSVGElement>('svg.map-svg');
@@ -291,6 +290,18 @@ export class App {
         this.step(ds.dir as G.Direction);
         return;
       // shop
+      case 'cat':
+        this.shopCat = ds.cat as ItemKind | 'supplies';
+        this.render();
+        queueMicrotask(() => this.root.querySelector<HTMLElement>(`[data-act="cat"][data-cat="${this.shopCat}"]`)?.focus());
+        return;
+      case 'uncart': {
+        const k = ds.k as ItemKind;
+        if (k === 'tires' || k === 'snacks' || k === 'toolkits') this.cart[k] = 0;
+        else delete this.cart.parts[k];
+        this.render();
+        return;
+      }
       case 'part': {
         const slot = ds.slot as PartSlot;
         const i = Number(ds.i);
@@ -555,6 +566,9 @@ export class App {
   private openShop() {
     this.stopWalk();
     this.cart = G.emptyCart();
+    const p = this.g.player;
+    this.shopCat = PART_SLOTS.find((slot) => !p.parts[slot] || p.parts[slot]!.quality <= 0) ?? (p.tires.length ? 'supplies' : 'tires');
+    if (this.shopCat === 'tires') this.shopCat = 'supplies';
     this.screen = 'shop';
     this.render();
   }
@@ -566,6 +580,7 @@ export class App {
       return this.render();
     }
     this.say('Purchase successful! Enjoy your new gear.', 'good');
+    this.flash('Order placed');
     this.closeShop();
   }
 
@@ -781,8 +796,7 @@ export class App {
     const zone = G.zoneOf(g);
     let stage = '';
     let paceLevel = g.level + 1;
-    if (this.screen === 'map') stage = this.mapView();
-    else if (this.screen === 'shop') stage = this.shopView();
+    if (this.screen === 'map' || this.screen === 'shop') stage = this.mapView();
     else if (this.screen === 'race') {
       stage = this.raceViewHtml();
       paceLevel = g.activeRace?.race.level ?? this.result?.session.race.level ?? paceLevel;
@@ -792,12 +806,12 @@ export class App {
         <button class="logo small" data-act="menu" aria-label="Menu">mtb<span>RPG</span></button>
         <span class="chip zone">${zone === 'usa' ? '🇺🇸' : '🇪🇺'} ${ZONE_LABELS[zone]}</span>
         <span class="spacer"></span>
-        <span class="chip stat-chip-top">${money(g.money)}</span>
-        <span class="chip stat-chip-top">${g.player.points} pts</span>
-        <button class="btn ghost small" data-act="menu" aria-label="Open menu">☰</button>
+        <button class="btn ghost small" data-act="help">How to play</button>
+        <button class="btn ghost small" data-act="menu" aria-label="Open menu">☰ Menu</button>
       </header>
       ${this.hudView(paceLevel)}
       <section class="stage">${stage}</section>
+      ${this.screen === 'shop' ? this.shopModal() : ''}
     </div>`;
   }
 
@@ -807,6 +821,10 @@ export class App {
     return `<div class="bar ${cls}"><span style="width:${pct}%"></span>${t}</div>`;
   }
 
+  private mini(label: string, value: string, pct: number, cls: string, tick?: number, sub?: string): string {
+    return `<div class="mini ${cls === 'none' ? 'missing' : ''}" ${sub ? `title="${sub}"` : ''}><div class="mt"><span>${label}</span><b>${value}</b></div>${this.bar(pct, 100, cls === 'none' ? '' : cls, tick)}</div>`;
+  }
+
   private hudView(paceLevel: number): string {
     const g = this.g;
     const p = g.player;
@@ -814,44 +832,45 @@ export class App {
     const stats = STAT_NAMES.map((s) => {
       const v = p[s];
       const cls = s === 'mental' ? (v < 40 ? 'bad' : v < 70 ? 'warn' : 'good') : v < pace ? 'bad' : v < pace + 10 ? 'warn' : 'good';
-      return `<div class="meter"><div class="meter-top"><span>${STAT_LABELS[s]}</span><b>${v}</b></div>${this.bar(v, 102, cls, s === 'mental' ? undefined : pace)}</div>`;
+      return this.mini(STAT_LABELS[s], String(v), (v / 102) * 100, cls, s === 'mental' ? undefined : (pace / 102) * 100);
     }).join('');
     const parts = PART_SLOTS.map((slot) => {
       const part = p.parts[slot];
-      if (!part) return `<div class="meter missing"><div class="meter-top"><span>${PART_LABELS[slot]}</span><b>none</b></div>${this.bar(0, 100)}</div>`;
+      if (!part) return this.mini(PART_LABELS[slot], 'none', 0, 'none');
       const cls = part.quality < 30 ? 'bad' : part.quality < 60 ? 'warn' : 'good';
-      return `<div class="meter"><div class="meter-top"><span title="${esc(part.name)}">${PART_LABELS[slot]} <em>${esc(part.name)}</em></span><b>${part.quality}<small>/${part.max}</small></b></div>${this.bar(part.quality, 100, cls)}</div>`;
+      return this.mini(PART_LABELS[slot], `${part.quality}<small>/${part.max}</small>`, part.quality, cls, undefined, esc(part.name));
     }).join('');
     const tire = p.tires.length
-      ? `<div class="meter"><div class="meter-top"><span>Tire tread</span><b>${p.tires[0]}<small>/${G.TIRE_LIFE}</small></b></div>${this.bar(p.tires[0], G.TIRE_LIFE, p.tires[0] < 6 ? 'bad' : p.tires[0] < 12 ? 'warn' : 'good')}</div>`
-      : `<div class="meter missing"><div class="meter-top"><span>Tire tread</span><b>no tires</b></div>${this.bar(0, 1)}</div>`;
-    const pips = (n: number, max: number, cls: string, title: string) =>
-      `<span class="pips ${cls}" title="${title}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
+      ? this.mini('Tire', `${p.tires[0]}<small>/${G.TIRE_LIFE}</small>`, (p.tires[0] / G.TIRE_LIFE) * 100, p.tires[0] < 6 ? 'bad' : p.tires[0] < 12 ? 'warn' : 'good')
+      : this.mini('Tire', 'none', 0, 'none');
+    const pips = (n: number, max: number, cls: string) =>
+      `<span class="pips ${cls}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
     const req = G.requiredPoints(g.level);
     const gate = g.phase === 'usa' || g.phase === 'europe'
-      ? (G.currentMap(g).races.length ? (p.points >= req ? 'Qualified for next flag' : `${req} needed for next flag`) : 'Final race unlocked')
+      ? (G.currentMap(g).races.length ? (p.points >= req ? 'qualified for next flag' : `${req} for next flag`) : 'final unlocked')
       : '';
-    return `<aside class="hud" aria-label="Rider">
-      <div class="hud-head">
-        <div class="avatar" aria-hidden="true">${esc(p.name.slice(0, 1).toUpperCase())}</div>
-        <div><div class="rider-name">${esc(p.name)}</div><div>${g.level ? levelBadge(g.level) : '<span class="badge">Rookie</span>'}</div></div>
+    return `<section class="hud" aria-label="Rider">
+      <div class="hud-bar">
+        <div class="hud-id"><div class="avatar" aria-hidden="true">${esc(p.name.slice(0, 1).toUpperCase())}</div>
+          <div><div class="rider-name">${esc(p.name)}</div><div>${g.level ? levelBadge(g.level) : '<span class="badge">Rookie</span>'}</div></div></div>
+        <div class="hud-kpi"><span>Points</span><b>${p.points}</b><small>${gate}</small></div>
+        <div class="hud-kpi"><span>Money</span><b class="${g.money < 0 ? 'neg' : ''}">${money(g.money)}</b><small>prices ×${G.shopMultiplier(g.level).toFixed(2)}</small></div>
+        <div class="hud-kpi"><span>Sponsors</span>${pips(g.sponsors, G.START_SPONSORS, 'sponsor')}<small>${g.sponsors} left</small></div>
+        <div class="hud-kpi"><span>Injuries</span>${pips(p.injuries, G.MAX_INJURIES, 'injury')}<small>${G.MAX_INJURIES - p.injuries} to go</small></div>
+        <div class="hud-supply" title="Spare tires, snacks and toolkits">
+          <span>${itemIcon('tires', 26)}<b>${Math.max(0, p.tires.length - 1)}</b></span>
+          <span>${itemIcon('snacks', 26)}<b>${p.snacks}</b></span>
+          <span>${itemIcon('toolkits', 26)}<b>${p.toolkits}</b></span>
+        </div>
       </div>
-      <div class="kpis">
-        <div><span>Points</span><b>${p.points}</b><small>${gate}</small></div>
-        <div><span>Money</span><b class="${g.money < 0 ? 'neg' : ''}">${money(g.money)}</b><small>Shop prices ×${G.shopMultiplier(g.level).toFixed(2)}</small></div>
-      </div>
-      <div class="status-row">
-        <div><span>Sponsors</span>${pips(g.sponsors, G.START_SPONSORS, 'sponsor', `${g.sponsors} sponsors left`)}</div>
-        <div><span>Injuries</span>${pips(p.injuries, G.MAX_INJURIES, 'injury', `${p.injuries} of ${G.MAX_INJURIES} injuries`)}</div>
-      </div>
-      <details class="hud-sec" data-sec="rider" ${this.hudOpen.rider ? 'open' : ''}><summary>Rider <small class="muted" title="Stats above the pace gain time in the next race; below it they lose time">pace ${pace}</small></summary>${stats}<p class="meter-note"><i class="tick-key"></i> Race pace ${pace}. Stats above it gain time.</p></details>
-      <details class="hud-sec" data-sec="bike" ${this.hudOpen.bike ? 'open' : ''}><summary>Bike <small class="muted" title="Average part health. Above 30 gains time in a race">health ${G.bikeHealth(p)}</small></summary>${parts}${tire}</details>
-      <div class="supplies">
-        <div title="Spare tires"><b>${Math.max(0, p.tires.length - 1)}</b><span>spare tires</span></div>
-        <div title="Snacks"><b>${p.snacks}</b><span>snacks</span></div>
-        <div title="Toolkits"><b>${p.toolkits}</b><span>toolkits</span></div>
-      </div>
-    </aside>`;
+      <details class="hud-meters" data-sec="meters" ${this.metersOpen ? 'open' : ''}>
+        <summary>Rider &amp; bike <small class="muted">pace ${pace} · bike health ${G.bikeHealth(p)}</small></summary>
+        <div class="mgroups">
+          <div class="mgroup"><h5 title="Stats above the race pace gain time; below it they lose time">Rider <i class="tick-key"></i> pace ${pace}</h5><div class="minis">${stats}</div></div>
+          <div class="mgroup"><h5 title="Average part health above 30 gains time; a part at 0 breaks">Bike · hp ${G.bikeHealth(p)}</h5><div class="minis">${parts}${tire}</div></div>
+        </div>
+      </details>
+    </section>`;
   }
 
   private mapView(): string {
@@ -909,66 +928,87 @@ export class App {
     </div>`;
   }
 
-  private shopView(): string {
+  private shopModal(): string {
     const g = this.g;
     const p = g.player;
     const lvl = g.level;
-    const depts = PART_SLOTS.map((slot) => {
+    const sum = G.summarizeCart(g, data, this.cart);
+    const cats: { key: ItemKind | 'supplies'; label: string; icon: ItemKind; note: string; need: boolean }[] = [
+      ...PART_SLOTS.map((slot) => {
+        const owned = p.parts[slot];
+        const need = !owned || owned.quality <= 0;
+        return { key: slot as ItemKind | 'supplies', label: PART_LABELS[slot], icon: slot as ItemKind, note: need ? 'needed' : this.cart.parts[slot] !== undefined ? 'in cart' : `${owned!.quality}/${owned!.max}`, need };
+      }),
+      { key: 'supplies', label: 'Supplies', icon: 'tires', note: !p.tires.length ? 'tires needed' : `${this.cart.tires + this.cart.snacks + this.cart.toolkits || ''}${this.cart.tires + this.cart.snacks + this.cart.toolkits ? ' in cart' : ''}`, need: !p.tires.length },
+    ];
+    const nav = cats.map((c) => `<button class="cat ${this.shopCat === c.key ? 'active' : ''}" data-act="cat" data-cat="${c.key}" aria-pressed="${this.shopCat === c.key}">${itemIcon(c.icon, 30)}<span class="cat-l">${c.label}<small class="${c.need ? 'need' : ''}">${c.note}</small></span></button>`).join('');
+
+    let items: string;
+    if (this.shopCat === 'supplies') {
+      items = (['tires', 'snacks', 'toolkits'] as G.Consumable[]).map((what) => {
+        const have = what === 'tires' ? p.tires.length : p[what];
+        const max = what === 'tires' ? G.MAX_TIRES : what === 'snacks' ? G.MAX_SNACKS : G.MAX_TOOLS;
+        const label = { tires: 'Tire', snacks: 'Trail snack', toolkits: 'Toolkit' }[what];
+        const note = { tires: `${G.TIRE_LIFE} sections of tread. Mounted one at a time.`, snacks: 'Restores all four stats a little.', toolkits: 'Repairs every working part a little.' }[what];
+        const left = G.maxAdd(p, what);
+        return `<div class="srow ${this.cart[what] ? 'selected' : ''}">${itemIcon(what, 44)}
+          <div><div class="name">${label}</div><div class="sub">${note} You have ${have}/${max}.</div></div>
+          <div class="price">${money(G.priceAt(G.UNIT_PRICES[what], lvl))}</div>
+          <div class="stepper"><button class="btn plain small" data-act="qty" data-what="${what}" data-d="-1" data-key="${what}-" ${this.cart[what] ? '' : 'disabled'} aria-label="Fewer">−</button><output>${this.cart[what]}</output><button class="btn plain small" data-act="qty" data-what="${what}" data-d="1" data-key="${what}+" ${this.cart[what] < left ? '' : 'disabled'} aria-label="More">+</button></div>
+        </div>`;
+      }).join('');
+    } else {
+      const slot = this.shopCat as PartSlot;
       const owned = p.parts[slot];
-      const rows = data.shop.parts[slot].map((it, i) => {
+      items = data.shop.parts[slot].map((it, i) => {
         const isOwned = owned?.name === it.name;
         const inCart = this.cart.parts[slot] === i;
-        return `<button class="item ${inCart ? 'selected' : ''} ${isOwned ? 'owned' : ''}" data-act="part" data-slot="${slot}" data-i="${i}" data-key="${slot}-${i}" ${isOwned ? 'disabled' : ''} aria-pressed="${inCart}">
-          <span class="item-name">${esc(it.name)}</span>
-          <span class="item-q">${isOwned ? `On your bike · ${owned!.quality}/${owned!.max} health` : `Health ${it.max}`}</span>
-          <span class="item-price">${money(G.priceAt(it.price, lvl))}</span></button>`;
+        return `<div class="srow ${inCart ? 'selected' : ''} ${isOwned ? 'owned' : ''}">${itemIcon(slot as ItemKind, 44)}
+          <div><div class="name">${esc(it.name)}</div><div class="sub">${isOwned ? `On your bike · ${owned!.quality}/${owned!.max} health` : `Health ${it.max}`}</div></div>
+          <div class="price">${money(G.priceAt(it.price, lvl))}</div>
+          <button class="btn ${inCart ? 'primary' : 'plain'} small" data-act="part" data-slot="${slot}" data-i="${i}" data-key="${slot}-${i}" ${isOwned ? 'disabled' : ''} aria-pressed="${inCart}">${isOwned ? 'Owned' : inCart ? '✓ In cart' : 'Add'}</button>
+        </div>`;
       }).join('');
-      return `<div class="dept"><h4>${PART_LABELS[slot]}${owned ? '' : ' <span class="need">needed</span>'}</h4>${rows}</div>`;
-    }).join('');
-    const sup = (['tires', 'snacks', 'toolkits'] as G.Consumable[]).map((what) => {
-      const have = what === 'tires' ? p.tires.length : p[what];
-      const max = what === 'tires' ? G.MAX_TIRES : what === 'snacks' ? G.MAX_SNACKS : G.MAX_TOOLS;
-      const label = { tires: 'Tires', snacks: 'Snacks', toolkits: 'Toolkits' }[what];
-      const note = { tires: `${G.TIRE_LIFE} sections of tread each`, snacks: 'Restore your stats', toolkits: 'Repair bike parts' }[what];
-      const left = G.maxAdd(p, what);
-      return `<div class="supply"><div><b>${label}</b> <span class="muted small">${money(G.priceAt(G.UNIT_PRICES[what], lvl))} each · ${note}</span><div class="muted small">You have ${have}/${max}</div></div>
-        <div class="stepper"><button class="btn plain small" data-act="qty" data-what="${what}" data-d="-1" data-key="${what}-" ${this.cart[what] ? '' : 'disabled'} aria-label="Fewer ${label}">−</button>
-        <output>${this.cart[what]}</output>
-        <button class="btn plain small" data-act="qty" data-what="${what}" data-d="1" data-key="${what}+" ${this.cart[what] < left ? '' : 'disabled'} aria-label="More ${label}">+</button></div></div>`;
-    }).join('');
-    const sum = G.summarizeCart(g, data, this.cart);
+      if (owned && this.cart.parts[slot] !== undefined) {
+        const tradeIn = Math.trunc(owned.price * G.shopMultiplier(lvl) * owned.quality / 100);
+        items += `<p class="muted small">Your ${esc(owned.name)} sells on the used market for ${money(tradeIn)}, taken off the total.</p>`;
+      }
+    }
+
     const lines: string[] = [];
     for (const slot of PART_SLOTS) {
       const i = this.cart.parts[slot];
       if (i === undefined) continue;
       const it = data.shop.parts[slot][i];
-      lines.push(`<li><span>${esc(it.name)}</span><b>${money(G.priceAt(it.price, lvl))}</b></li>`);
+      lines.push(`<li class="cline">${itemIcon(slot as ItemKind, 30)}<span><b>${esc(it.name)}</b><small>${PART_LABELS[slot]}${p.parts[slot] ? ' · replaces ' + esc(p.parts[slot]!.name) : ''}</small></span><span class="cp">${money(G.priceAt(it.price, lvl))}<button class="linkish" data-act="uncart" data-k="${slot}" aria-label="Remove ${PART_LABELS[slot]}">Remove</button></span></li>`);
     }
     for (const what of ['tires', 'snacks', 'toolkits'] as G.Consumable[]) {
-      if (this.cart[what]) lines.push(`<li><span>${this.cart[what]} × ${what}</span><b>${money(this.cart[what] * G.priceAt(G.UNIT_PRICES[what], lvl))}</b></li>`);
+      if (!this.cart[what]) continue;
+      lines.push(`<li class="cline">${itemIcon(what, 30)}<span><b>${this.cart[what]} × ${{ tires: 'Tire', snacks: 'Trail snack', toolkits: 'Toolkit' }[what]}</b><small>${money(G.priceAt(G.UNIT_PRICES[what], lvl))} each</small></span><span class="cp">${money(this.cart[what] * G.priceAt(G.UNIT_PRICES[what], lvl))}<button class="linkish" data-act="uncart" data-k="${what}" aria-label="Remove ${what}">Remove</button></span></li>`);
     }
     const shortfall = G.sponsorShortfall(g, data);
     const sponsor = shortfall > 0 && g.sponsors > 0 && sum.empty
-      ? `<div class="notice warn"><b>Short on cash?</b> You need ${money(shortfall)} more to get race-ready. A sponsor can cover it — but they’ll drop you. <button class="btn plain small" data-act="sponsor">Call a sponsor (${g.sponsors} left)</button></div>`
+      ? `<div class="notice warn"><span><b>Short on cash?</b> You need ${money(shortfall)} more to get race-ready. A sponsor can cover it, then they drop you.</span><button class="btn plain small" data-act="sponsor">Call a sponsor (${g.sponsors} left)</button></div>`
       : '';
     const after = g.money - sum.total;
-    return `<div class="shop">
-      <div class="shop-head"><div><h2>Bike shop</h2><p class="muted">Welcome to the bike shop! What are you looking for today?${lvl ? ` Prices here are ×${G.shopMultiplier(lvl).toFixed(2)} at your level.` : ''}</p></div>
-        <button class="btn ghost" data-act="leave">Leave shop</button></div>
+    return `<div class="modal-backdrop"><div class="modal shop-modal" role="dialog" aria-modal="true" aria-labelledby="shop-title">
+      <header class="shop-top"><h2 id="shop-title">Bike shop</h2><span class="muted small">${lvl ? `Level ${lvl} prices, ×${G.shopMultiplier(lvl).toFixed(2)}` : 'Welcome! Build a bike and stock up.'}</span><span class="spacer"></span><span class="chip">${money(g.money)}</span><button class="btn ghost small" data-act="leave" aria-label="Close shop">✕</button></header>
       ${sponsor}
-      <div class="shop-body">
-        <div class="depts">${depts}<div class="dept supplies-dept"><h4>Supplies</h4>${sup}</div></div>
-        <aside class="cart card"><h3>Your cart</h3>
-          <ul class="cart-lines">${lines.join('') || '<li class="muted">Empty</li>'}</ul>
-          <dl class="totals"><dt>Subtotal</dt><dd>${money(sum.subtotal)}</dd>
+      <div class="shop-grid">
+        <nav class="shop-cats" aria-label="Departments">${nav}</nav>
+        <section class="shop-items">${items}</section>
+        <aside class="shop-cart"><h3>Cart</h3>
+          <ul class="clines">${lines.join('') || '<li class="muted small">Your cart is empty. Add parts or supplies.</li>'}</ul>
+          <dl class="totals"><dt>Items</dt><dd>${money(sum.subtotal)}</dd>
           ${sum.tradeIn ? `<dt>Old parts sold</dt><dd class="good">−${money(sum.tradeIn)}</dd>` : ''}
           <dt class="total">Total</dt><dd class="total">${money(sum.total)}</dd>
-          <dt>After checkout</dt><dd class="${after < 0 ? 'neg' : ''}">${money(after)}</dd></dl>
-          ${!sum.canAfford ? '<p class="warn small">Whoops! You don’t have enough funds for this cart.</p>' : ''}
+          <dt>Left after</dt><dd class="${after < 0 ? 'neg' : ''}">${money(after)}</dd></dl>
+          ${!sum.canAfford ? '<p class="warn small">Not enough money for this cart.</p>' : ''}
           <button class="btn primary block" data-act="checkout" ${sum.empty || !sum.canAfford ? 'disabled' : ''}>${sum.empty ? 'Checkout' : `Checkout · ${money(sum.total)}`}</button>
+          <button class="btn ghost block small" data-act="leave">${sum.empty ? 'Leave shop' : 'Leave without buying'}</button>
         </aside>
       </div>
-    </div>`;
+    </div></div>`;
   }
 
   private raceViewHtml(): string {

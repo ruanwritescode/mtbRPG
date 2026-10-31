@@ -282,41 +282,69 @@ function wheel(cx: number, cy: number): string {
 }
 
 /**
- * A rider in the attack position on a full-suspension bike, facing right. Origin is on the ground between
- * the wheels; the drawing is about 70 units long and 90 tall at scale 1.
+ * A downhill frame in side view, facing right, drawn like a product shot of a Pivot Phoenix: no wheels
+ * or fork, a tall slack head tube, a big straight down tube, a short seat mast, a near-vertical coil
+ * shock in front of the seat tube driven by a rocker link, flat chainstays and a lower link at the BB.
+ * Black with gold details. Origin is the bottom bracket; about 215 wide and 125 tall at scale 1.
  */
-export function rider(x: number, y: number, scale = 1, rotate = 0, jersey = '#1F6B4A', cls = 'rider'): string {
-  const tubes = 'M17 -40 L20 -33 M20 -33 L25 -14 M20 -33 L-3 -10 M17 -40 L-8 -37 M-8 -37 L-3 -10 M-3 -10 L-25 -14 M-25 -14 L-10 -31';
-  const limb = (d: string, w: number, color: string) =>
-    `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${w + 2.4}" stroke-linecap="round" stroke-linejoin="round"/>
-     <path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
-  const pants = '#33373D';
-  const skin = '#D9A57A';
-  return `<g class="${cls}" transform="translate(${x} ${y}) rotate(${rotate}) scale(${scale})">
-    <ellipse cx="0" cy="1" rx="34" ry="4" fill="${C.shadow}"/>
-    ${wheel(-25, -14)}${wheel(25, -14)}
-    <path d="${tubes}" fill="none" stroke="${INK}" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${tubes}" fill="none" stroke="#D5D8DB" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M-10 -31 L4 -35" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>
-    <path d="M-10 -31 L4 -35" fill="none" stroke="${jersey}" stroke-width="2" stroke-linecap="round"/>
-    <circle cx="-3" cy="-10" r="4.5" fill="none" stroke="${INK}" stroke-width="1.6"/>
-    <path d="M-3 -10 L7 -3 M-3 -10 L-12 -16" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>
-    <path d="M4 -3 L10 -3 M-15 -16 L-9 -16" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>
-    <path d="M-3 -14.5 L-25 -16.5 M-3 -5.5 L-25 -11.5" stroke="${INK}" stroke-width="1" opacity=".7"/>
-    <path d="M17 -40 L14 -46 M10 -47 L19 -45" fill="none" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/>
-    <path d="M-15 -40 L-5 -41" stroke="${INK}" stroke-width="3.6" stroke-linecap="round"/>
-    ${limb('M-11 -49 L-9 -30 L-12 -16', 6, '#262A2F')}
-    ${limb('M7 -69 L17 -56 L14 -46', 4.5, jersey)}
-    ${limb('M-11 -49 L7 -30 L7 -3', 6.5, pants)}
-    <path d="M-15 -45 C-17 -56 -8 -62 -2 -64 L8 -72 L13 -66 L4 -56 C-2 -50 -8 -46 -11 -42Z" fill="${jersey}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M-4 -57 L4 -62" stroke="#FBFAF6" stroke-width="2" stroke-linecap="round" opacity=".8"/>
-    ${limb('M9 -70 L19 -58 L15 -46', 4.5, jersey)}
-    <path d="M15 -48 L13 -45" stroke="${skin}" stroke-width="4" stroke-linecap="round"/>
-    <path d="M8 -79 C8 -88 15 -93 22 -92 C29 -91 33 -86 33 -80 L34 -73 L28 -69 L18 -69 L10 -72Z" fill="${jersey}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M22 -92 L37 -88 L36 -85 L28 -87Z" fill="${jersey}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M14 -81 L32 -80 L32 -75 L15 -76Z" fill="#2F6F9F" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/>
-    <path d="M18 -78 L24 -78" stroke="#8FC3E6" stroke-width="1.5" stroke-linecap="round"/>
-    <path d="M20 -72 L31 -73" stroke="${INK}" stroke-width="1.4" stroke-linecap="round"/>
+export function frameArt(x: number, y: number, scale = 1, rotate = 0): string {
+  const black = '#1F2227';
+  const edge = '#0D0F12';
+  const hi = '#565B63';
+  const gold = '#C9A04A';
+  const tube = (d: string, w: number) =>
+    `<path d="${d}" fill="none" stroke="${edge}" stroke-width="${w + 3}" stroke-linecap="round" stroke-linejoin="round"/>
+     <path d="${d}" fill="none" stroke="${black}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>
+     <path d="${d}" fill="none" stroke="${hi}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 ${-(w / 2 - 2)})" opacity=".75"/>`;
+  const pivot = (cx: number, cy: number, r = 3.2) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${black}" stroke="${edge}" stroke-width="1.6"/><circle cx="${cx}" cy="${cy}" r="${r - 1.8}" fill="${hi}"/>`;
+  const rand = rng(99);
+  let speckle = '';
+  for (let i = 0; i < 26; i++) {
+    const t = rand();
+    const onTop = rand() < 0.4;
+    const px = onTop ? 106 - 112 * t : 113 - 109 * t;
+    const py = onTop ? -110 + 54 * t : -92 + 90 * t;
+    speckle += `<circle cx="${r1(px + (rand() - 0.5) * (onTop ? 5 : 8))}" cy="${r1(py + (rand() - 0.5) * (onTop ? 5 : 8))}" r="${r1(0.5 + rand() * 0.6)}" fill="${gold}" opacity=".85"/>`;
+  }
+  return `<g transform="translate(${x} ${y}) rotate(${rotate}) scale(${scale})">
+    <!-- rear triangle -->
+    ${tube('M-10 -15 Q-50 -16 -89 -3', 10)}
+    ${tube('M-88 -6 L-12 -46', 8)}
+    ${tube('M-80 -7 L-78 -2', 6)}
+    <circle cx="-92" cy="-1" r="4.5" fill="${black}" stroke="${edge}" stroke-width="2"/><circle cx="-92" cy="-1" r="1.6" fill="${hi}"/>
+    <path d="M-70 -12 L-30 -12" stroke="${hi}" stroke-width="1.2" stroke-dasharray="6 4" opacity=".6"/>
+    <!-- front triangle -->
+    ${tube('M113 -92 L4 -2', 14)}
+    ${tube('M106 -110 L-6 -56', 9)}
+    ${tube('M-5 -56 L0 -8', 9)}
+    ${tube('M-5 -56 L-11 -78', 8)}
+    ${tube('M109 -114 L116 -94', 12)}
+    <path d="M109 -114 L110 -110" stroke="${gold}" stroke-width="10" stroke-linecap="round"/>
+    <path d="M110 -117 L120 -116" stroke="${edge}" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="-11" cy="-78" r="4.5" fill="${gold}" stroke="${edge}" stroke-width="1.6"/>
+    <path d="M86 -70 L34 -27" stroke="${gold}" stroke-width="4.5" stroke-linecap="round" opacity=".95"/>
+    <path d="M78 -66 L60 -51 M70 -58 L52 -43" stroke="${black}" stroke-width="1.6" stroke-linecap="round"/>
+    ${speckle}
+    <!-- links -->
+    ${tube('M-10 -16 L-2 -6', 6)}${pivot(-10, -16, 2.8)}${pivot(-2, -6, 2.8)}
+    <path d="M-4 -53 L18 -51 L0 -38Z" fill="${black}" stroke="${edge}" stroke-width="2.4" stroke-linejoin="round"/>
+    ${pivot(-4, -53)}${pivot(0, -38)}${pivot(18, -51)}
+    <!-- shock: eyelet, Kashima shaft, body, reservoir -->
+    <path d="M18 -51 L16 -36" stroke="${edge}" stroke-width="8" stroke-linecap="round"/>
+    <path d="M18 -51 L16 -36" stroke="${gold}" stroke-width="5" stroke-linecap="round"/>
+    <path d="M16 -37 L13 -8" stroke="${edge}" stroke-width="15" stroke-linecap="round"/>
+    <path d="M16 -37 L13 -8" stroke="${black}" stroke-width="12" stroke-linecap="round"/>
+    <path d="M16 -36 L15.6 -32" stroke="${gold}" stroke-width="12" stroke-linecap="butt"/>
+    <path d="M13.5 -30 L11.5 -12" stroke="${hi}" stroke-width="1.4" stroke-linecap="round" transform="translate(-3.5 0)" opacity=".7"/>
+    <circle cx="27" cy="-45" r="7" fill="${black}" stroke="${edge}" stroke-width="2"/><circle cx="27" cy="-45" r="2.5" fill="#2F6F9F"/>
+    ${pivot(13, -8)}
+    <!-- cranks and chainring -->
+    <circle cx="0" cy="0" r="10" fill="${black}" stroke="${edge}" stroke-width="2.2"/>
+    <circle cx="0" cy="0" r="9.4" fill="none" stroke="${hi}" stroke-width="1.6" stroke-dasharray="1.6 1.6"/>
+    <path d="M0 0 L36 6 M0 0 L-34 11" stroke="${edge}" stroke-width="8.5" stroke-linecap="round"/>
+    <path d="M0 0 L36 6 M0 0 L-34 11" stroke="${black}" stroke-width="5.5" stroke-linecap="round"/>
+    <circle cx="36" cy="6" r="1.6" fill="${hi}"/><circle cx="-34" cy="11" r="1.6" fill="${hi}"/>
+    <circle cx="0" cy="0" r="3.6" fill="${hi}" stroke="${edge}" stroke-width="1.4"/>
   </g>`;
 }
 
@@ -367,7 +395,6 @@ function corner(dir: 'left' | 'right'): string {
       ${ink('M470 360 C 470 290, 400 240, 190 232', 1, 'opacity=".5"')}
       ${line('M400 352 C 420 292, 360 252, 200 240', 'fast')}
       ${line('M488 352 C 500 282, 420 226, 200 220', 'safe')}
-      ${rider(470, 332, 0.95, -12, '#F2791C')}
     </g>
     ${pin(1, px(300), 206)}${pin(2, px(420), 168)}
   `, { label: `${dir === 'left' ? 'Left' : 'Right'} hand corner` });
@@ -389,7 +416,6 @@ function rollers(): string {
     ${line('M120 296 Q200 212 280 296 Q360 212 440 296', 'risky')}
     ${line('M120 306 Q160 262 200 306 Q240 262 280 306 Q320 262 360 306 Q400 262 440 306', 'safe')}
     ${rock(520, 340, 1, 11)}${fern(760, 352, 0.9, true)}
-    ${rider(78, 300, 0.9, 0)}
     ${pin(1, 280, 184)}${pin(2, 200, 232)}${pin(3, 470, 278)}
   `, { label: 'Roller section' });
 }
@@ -403,7 +429,6 @@ function whoops(): string {
     shade += ` M${x + 20} 286 Q${x + 32} 290 ${x + 40} 300 L${x + 20} 300Z`;
   }
   top += ' L800 300';
-  const dust = `<g fill="none" stroke="${INK}" stroke-width="1.3" stroke-linecap="round" opacity=".55"><path d="M330 250 c-8 -6 -18 -4 -24 2 M322 262 c-10 -4 -20 0 -26 6 M334 272 c-8 -2 -16 2 -20 8"/></g>`;
   return frame(id, `
     ${ground(230, 8)}
     ${conifer(50, 252, 1.3, 12)}${broadleaf(140, 240, 0.8)}${conifer(740, 256, 1.5, 13)}${conifer(680, 242, 1, 14)}
@@ -411,8 +436,6 @@ function whoops(): string {
     <path d="${top} L800 360 L0 360Z" fill="url(#dots-${id})" opacity=".22"/>
     <path d="${shade}" fill="${C.dirtDark}" opacity=".45"/>
     ${rock(760, 344, 0.9, 15)}
-    <g class="bounce">${rider(390, 286, 1, -8, '#D2453B')}</g>
-    ${dust}
   `, { label: 'Moto whoop section' });
 }
 
@@ -429,7 +452,6 @@ function switchbacks(): string {
     ${line('M300 118 L300 300', 'risky')}
     ${line('M190 132 Q140 148 180 162', 'fast')}
     ${line('M612 194 Q690 212 640 234', 'safe')}
-    ${rider(570, 94, 0.6, 6)}
     ${pin(1, 300, 216)}${pin(2, 118, 124)}${pin(3, 700, 190)}
   `, { label: 'Switchbacks on a steep hillside', sky: false, hills: false });
 }
@@ -460,7 +482,6 @@ function gapJump(): string {
     ${ribbon(id, 'M170 292 Q260 300 330 334 Q420 352 520 344 Q600 338 650 310', 16)}
     ${line('M300 222 Q410 70 540 236', 'risky')}
     ${line('M180 300 Q300 320 360 336 Q450 352 600 326', 'safe')}
-    ${rider(238, 282, 0.9, -24)}
     ${pin(1, 420, 118)}${pin(2, 450, 310)}
   `, { label: 'Gap jump with a chicken line' });
 }
@@ -479,7 +500,6 @@ function motorway(): string {
     ${trailPoly(id, [[60, 360], [120, 360], [378, 222], [372, 222]], [[60, 360], [120, 360], [378, 222], [372, 222]])}
     ${ink(bumps, 1.2, 'opacity=".55"')}
     ${rock(140, 340, 0.8, 32)}${fern(690, 352, 1, true)}
-    <g class="bounce">${rider(400, 342, 1.05, 0, '#F2791C')}</g>
   `, { label: 'Motorway straight' });
 }
 
@@ -534,7 +554,6 @@ function startGate(level: number): string {
     ${ramp}${posts}${truss}
     <text x="400" y="${level >= 3 ? 160 : 160}" text-anchor="middle" font-size="24" font-weight="900" letter-spacing="4" font-family="system-ui, sans-serif" fill="#FBFAF6">${banner}</text>
     ${flags}
-    ${rider(400, 300, 1.1, 0)}
   `, { label: `${banner.toLowerCase()} gate` });
 }
 
@@ -566,13 +585,7 @@ export const stickers = {
     <circle r="22" fill="#D5D8DB" stroke="${INK}" stroke-width="2.5"/>
     <circle r="9" fill="#FBFAF6" stroke="${INK}" stroke-width="2.5"/>`,
   wheel: () => `<g transform="scale(2.4)">${wheel(0, 0)}</g>`,
-  frame: () => `<g transform="translate(6 42) scale(1.7)">
-    <path d="M17 -40 L20 -33 L25 -14 M20 -33 L-3 -10 M17 -40 L-8 -37 L-3 -10 L-25 -14 L-10 -31" fill="none" stroke="${INK}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M17 -40 L20 -33 L25 -14 M20 -33 L-3 -10 M17 -40 L-8 -37 L-3 -10 L-25 -14 L-10 -31" fill="none" stroke="#1F6B4A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M-10 -31 L4 -35" stroke="${INK}" stroke-width="7" stroke-linecap="round"/><path d="M-10 -31 L4 -35" stroke="#F2791C" stroke-width="3" stroke-linecap="round"/>
-    <path d="M17 -40 L14 -46 M9 -47 L20 -45 M-15 -40 L-4 -41" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
-    <circle cx="-3" cy="-10" r="5" fill="#FBFAF6" stroke="${INK}" stroke-width="2.5"/>
-  </g>`,
+  frame: () => `<g transform="translate(-6 30)">${frameArt(0, 0, 0.5, -8)}</g>`,
   rotor: () => `<circle r="34" fill="#C9CBCE" stroke="${INK}" stroke-width="3"/>
     ${Array.from({ length: 8 }, (_, i) => { const a = (i / 8) * Math.PI * 2; return `<circle cx="${r1(Math.cos(a) * 24)}" cy="${r1(Math.sin(a) * 24)}" r="4" fill="#FBFAF6" stroke="${INK}" stroke-width="1.8"/>`; }).join('')}
     <circle r="12" fill="#8C9094" stroke="${INK}" stroke-width="2.5"/><circle r="4" fill="${INK}"/>
@@ -633,15 +646,23 @@ export const stickers = {
     <circle r="12" fill="#FBFAF6" stroke="${INK}" stroke-width="2"/>
     <text y="5" text-anchor="middle" font-size="16" font-weight="900" font-family="system-ui, sans-serif" fill="${INK}">$</text>
   </g>`,
-  rider: () => `<g transform="translate(0 44)">${rider(0, 0, 1, -6, '#F2791C', 'sticker-rider')}</g>`,
 };
 
 type StickerName = keyof typeof stickers;
+
+export type ItemKind = 'frame' | 'suspension' | 'brakes' | 'wheels' | 'tires' | 'snacks' | 'toolkits';
+const ITEM_STICKER: Record<ItemKind, StickerName> = { frame: 'frame', suspension: 'shock', brakes: 'rotor', wheels: 'wheel', tires: 'tire', snacks: 'snack', toolkits: 'wrench' };
+
+/** A small inline icon for a kind of shop item, drawn from the same stickers as the title screen. */
+export function itemIcon(kind: ItemKind, size = 40): string {
+  const fn = stickers[ITEM_STICKER[kind]] as () => string;
+  return `<svg class="item-icon" width="${size}" height="${size}" viewBox="-58 -58 116 116" aria-hidden="true"><g transform="scale(.92)">${fn()}</g></svg>`;
+}
 type Placement = [StickerName, number, number, number, number, ...string[]];
 
 const LANDSCAPE: Placement[] = [
-  ['wrench', 300, 110, 15, 0.9], ['frame', 470, 70, -6, 0.8], ['rotor', 650, 64, 10, 0.75], ['badge', 870, 80, -8, 0.9], ['pin', 1080, 110, 10, 0.8],
-  ['tire', 130, 210, -15, 1], ['snack', 130, 390, 0, 1], ['sign', 110, 560, -6, 0.9, 'circle'], ['rider', 230, 620, 0, 1.5],
+  ['wrench', 330, 100, 15, 0.9], ['rotor', 620, 64, 10, 0.8], ['badge', 870, 80, -8, 0.9], ['pin', 1080, 110, 10, 0.8],
+  ['tire', 130, 210, -15, 1], ['snack', 130, 390, 0, 1], ['sign', 110, 560, -6, 0.9, 'circle'], ['frame', 250, 620, 0, 2.9],
   ['trophy', 1040, 250, 8, 1.1], ['flag', 1130, 400, 0, 1, '#1F6FD1'], ['cash', 1030, 520, 0, 1], ['wheel', 1090, 660, 12, 1],
   ['shock', 430, 690, 0, 0.9], ['helmet', 600, 690, -10, 0.8], ['sign', 780, 680, 5, 0.85, 'diamond'], ['checkered', 930, 660, 6, 0.9],
 ];
@@ -649,7 +670,7 @@ const LANDSCAPE: Placement[] = [
 const PORTRAIT: Placement[] = [
   ['wrench', 190, 90, 15, 0.8], ['trophy', 330, 120, 8, 0.9], ['rotor', 480, 70, 10, 0.7], ['badge', 610, 120, -8, 0.8],
   ['tire', 170, 250, -15, 0.8], ['flag', 640, 270, 0, 0.8, '#1F6FD1'], ['pin', 165, 400, 10, 0.6], ['snack', 640, 420, 0, 0.75],
-  ['rider', 240, 940, 0, 1.2], ['cash', 430, 880, 0, 0.8], ['wheel', 600, 940, 12, 0.8],
+  ['frame', 300, 930, 0, 2.2], ['cash', 430, 880, 0, 0.8], ['wheel', 600, 940, 12, 0.8],
   ['shock', 350, 1040, 0, 0.8], ['helmet', 500, 1050, -10, 0.7], ['sign', 630, 1070, 5, 0.75, 'diamond'], ['checkered', 190, 1070, 6, 0.7],
 ];
 
