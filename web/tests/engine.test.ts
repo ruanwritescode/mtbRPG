@@ -17,7 +17,7 @@ describe('data files', () => {
   });
 
   it('parses the shop inventory', () => {
-    expect(data.shop.parts.frame[0]).toMatchObject({ name: 'Commencal Supreme V5', price: 3000, quality: 100, max: 100 });
+    expect(data.shop.parts.frame[0]).toMatchObject({ name: 'Santa Cruz V10', price: 5200, quality: 100, max: 100 });
     for (const list of Object.values(data.shop.parts)) expect(list).toHaveLength(5);
   });
 
@@ -46,18 +46,31 @@ describe('part attributes', () => {
 
   it('gives the frames distinct characters', () => {
     const f = Object.fromEntries(data.shop.parts.frame.map((p) => [p.name, p.attrs!]));
-    expect(f['Commencal Supreme V5'].speed).toBeGreaterThan(f['Santa Cruz V10'].speed);
+    expect(f['Commencal Supreme V5'].durability).toBeGreaterThan(f['Santa Cruz V10'].durability);
     expect(f['Santa Cruz V10'].playfulness).toBeGreaterThan(f['Commencal Supreme V5'].playfulness);
     expect(f['Pivot Phoenix'].lightness).toBeGreaterThan(f['Commencal Supreme V5'].lightness);
   });
 
+  it('prices parts by usefulness: within a slot a dearer part has higher ratings and health', () => {
+    for (const list of Object.values(data.shop.parts)) {
+      const sorted = [...list].sort((a, b) => b.price - a.price);
+      const total = (p: (typeof list)[number]) => Object.values(p.attrs!).reduce((x, y) => x + y, 0);
+      for (let i = 1; i < sorted.length; i++) {
+        expect(total(sorted[i - 1]), `${sorted[i - 1].name} vs ${sorted[i].name}`).toBeGreaterThanOrEqual(total(sorted[i]));
+        expect(sorted[i - 1].max).toBeGreaterThanOrEqual(sorted[i].max);
+      }
+    }
+  });
+
   it('averages the bike and makes a playful bike more forgiving', () => {
     const s = G.createGame('A', data, seededRng(7));
+    s.money = 20000;
     const cart = G.emptyCart();
     cart.parts = { frame: 0, suspension: 0, brakes: 0, wheels: 0 };
-    G.checkout(s, data, cart);
+    expect(G.checkout(s, data, cart)).toBe(true);
     const a = G.bikeAttrs(s.player);
     expect(a.speed).toBeGreaterThanOrEqual(9);
+    expect(G.bikeAttrs(s.player).playfulness).toBeGreaterThanOrEqual(8);
     s.player.strength = 30;
     const stiff = G.crashRisk(s.player, 'strength', 7);
     for (const slot of ['frame', 'suspension', 'brakes', 'wheels'] as const) s.player.parts[slot]!.attrs = { speed: 6, durability: 6, playfulness: 10, lightness: 6 };
@@ -68,7 +81,7 @@ describe('part attributes', () => {
 describe('game rules', () => {
   it('starts a new game like the original', () => {
     const s = G.createGame('Demi', data, seededRng(1));
-    expect(s.money).toBe(6050);
+    expect(s.money).toBe(8000);
     expect(s.level).toBe(0);
     expect(s.maps.usa.races).toHaveLength(5);
     expect(s.maps.europe.races).toHaveLength(5);
@@ -107,17 +120,17 @@ describe('game rules', () => {
     const cart = G.emptyCart();
     cart.parts.frame = 0;
     cart.tires = 2;
-    expect(G.summarizeCart(s, data, cart)).toMatchObject({ subtotal: 3180, tradeIn: 0, canAfford: true });
+    expect(G.summarizeCart(s, data, cart)).toMatchObject({ subtotal: 5390, tradeIn: 0, canAfford: true });
     expect(G.checkout(s, data, cart)).toBe(true);
-    expect(s.money).toBe(6050 - 3180);
+    expect(s.money).toBe(8000 - 5390);
     expect(s.player.tires).toEqual([20, 20]);
     s.level = 1;
     s.player.parts.frame!.quality = 50;
     const swap = G.emptyCart();
-    swap.parts.frame = 4; // Santa Cruz V10, 2550
+    swap.parts.frame = 4; // Commencal Supreme V5, 2900
     const sum = G.summarizeCart(s, data, swap);
-    expect(sum.subtotal).toBe(Math.trunc(2550 * 1.17));
-    expect(sum.tradeIn).toBe(Math.trunc((3000 * 1.17 * 50) / 100));
+    expect(sum.subtotal).toBe(2900);
+    expect(sum.tradeIn).toBe(Math.trunc((5200 * 50) / 100));
   });
 
   it('blocks racing without a complete bike and tires', () => {
@@ -152,7 +165,7 @@ describe('game rules', () => {
     expect(pick.race.level).toBe(1);
     s.maps.usa.player = { ...s.maps.usa.races[0] };
     const session = G.startRace(s, data, 'map', pick, rng);
-    expect(s.money).toBeLessThan(6050);
+    expect(s.money).toBeLessThan(8000);
     session.status = 'running';
     let guard = 0;
     while (session.status === 'running' && guard++ < 50) G.rideSection(s, data, session, 1, rng);

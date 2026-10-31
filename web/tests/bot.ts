@@ -125,9 +125,9 @@ export function playSeason(rng: Rng, maxSteps = 20000): BotRun {
   const needsShop = () =>
     !shopped && (G.raceBlocker(state.player)?.includes('parts') ||
     !state.player.tires.length ||
-    (state.player.toolkits === 0 && state.money > G.priceAt(100, state.level) * 2) ||
+    (state.player.toolkits === 0 && state.money > G.priceAt(G.UNIT_PRICES.toolkits, state.level) * 2) ||
     PART_SLOTS.some((s) => (state.player.parts[s]?.quality ?? 0) < 40) ||
-    (state.player.tires.length < 2 && state.money > G.priceAt(90, state.level) * 2) ||
+    (state.player.tires.length < 2 && state.money > G.priceAt(G.UNIT_PRICES.tires, state.level) * 2) ||
     (state.player.snacks === 0 && state.money > 200));
 
   const race = (kind: RaceKind): boolean => {

@@ -21,12 +21,14 @@ import {
   type Zone,
 } from './types';
 
-export const START_MONEY = 6050;
+/** Sponsor money at the start: enough for a mid-range bike plus tires and supplies at real-world prices. */
+export const START_MONEY = 8000;
 export const MAX_TIRES = 5;
 export const MAX_TOOLS = 3;
 export const MAX_SNACKS = 9;
 export const TIRE_LIFE = 20;
-export const UNIT_PRICES = { tires: 90, snacks: 10, toolkits: 100 } as const;
+/** Real-world prices: a Maxxis DH tire, an energy bar, and a home mechanic's toolkit. */
+export const UNIT_PRICES = { tires: 95, snacks: 3, toolkits: 400 } as const;
 export type Consumable = keyof typeof UNIT_PRICES;
 export const QUIT_PENALTY = 20;
 export const START_SPONSORS = 3;
@@ -35,9 +37,10 @@ export const FINAL_BONUS = 1000;
 /**
  * Prize money for 1st/2nd/3rd, scaled by (level/7)^2. fix: the original paid 1000/750/500, about the
  * same as the entry fee, so racing never made money and a season could not be finished (checked with
- * the bot in tests/bot.ts). Three times that lets a rider who looks after their bike stay afloat.
+ * the bot in tests/bot.ts). Five times that (a World Cup win pays $5,000) keeps a rider who looks after
+ * their bike afloat at real-world part prices.
  */
-export const PRIZES = [0, 3000, 2250, 1500];
+export const PRIZES = [0, 5000, 3750, 2500];
 const MAX_RACES_ON_MAP = 5;
 /** Level of the race at each map's F. fix: Europe's final is the World Championship (level 8). */
 export const FINAL_LEVEL: Record<Zone, number> = { usa: 6, europe: 8 };
@@ -235,8 +238,12 @@ export function requiredPoints(level: number): number {
   return 75 * level * level;
 }
 
-export function shopMultiplier(level: number): number {
-  return 1 + level * 0.17;
+/**
+ * Shop price multiplier by level. The original raised prices 17% per level; parts now cost their real-world
+ * price at every level, so this is 1. Kept so the rule has one place to change.
+ */
+export function shopMultiplier(_level: number): number {
+  return 1;
 }
 
 export function levelUp(state: GameState) {

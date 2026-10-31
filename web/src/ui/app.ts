@@ -1022,7 +1022,7 @@ export class App {
       : '';
     const after = g.money - sum.total;
     return `<div class="modal-backdrop"><div class="modal shop-modal" role="dialog" aria-modal="true" aria-labelledby="shop-title">
-      <header class="shop-top"><h2 id="shop-title">Bike shop</h2><span class="muted small">${lvl ? `Level ${lvl} prices, ×${G.shopMultiplier(lvl).toFixed(2)}` : 'Welcome! Build a bike and stock up.'}</span><span class="spacer"></span><span class="chip">${money(g.money)}</span><button class="btn ghost small" data-act="leave" aria-label="Close shop">✕</button></header>
+      <header class="shop-top"><h2 id="shop-title">Bike shop</h2><span class="muted small">${lvl ? 'Real-world prices. Better parts ride better.' : 'Welcome! Build a bike and stock up.'}</span><span class="spacer"></span><span class="chip">${money(g.money)}</span><button class="btn ghost small" data-act="leave" aria-label="Close shop">✕</button></header>
       ${sponsor}
       <div class="shop-grid">
         <nav class="shop-cats" aria-label="Departments">${nav}</nav>

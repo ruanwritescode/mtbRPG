@@ -70,8 +70,12 @@ nothing, so the base balance is unchanged.
 
 The formulas follow the C++ code. These changes fix crashes, keep the game finishable, or come from playtesting:
 
-- **Prize money is 3× the original.** The original paid about the same as the entry fee, so racing never made
-  money and the bot could never finish a season.
+- **Real-world prices.** Every part, tire, snack and toolkit costs roughly its real retail price (frame-only
+  prices for frames, pairs for brakes, wheelsets for wheels), and prices no longer rise with your level.
+  Within each slot a dearer part has higher ratings and more health, so you get what you pay for. Starting
+  sponsor money is $8,000, enough for a mid-range bike.
+- **Prize money is 5× the original** (a World Cup win pays $5,000). The original paid about the same as the
+  entry fee, so racing never made money and the bot could never finish a season.
 - **A loss can be off the podium.** The original's margin check always gave second place on a loss. The README
   says you can miss the podium, so now you can.
 - **Sponsors and game over.** You start with 3 sponsors. If you're broke and can't race, a sponsor will pay what
