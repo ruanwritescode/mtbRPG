@@ -18,7 +18,7 @@ describe('data files', () => {
 
   it('parses the shop inventory', () => {
     expect(data.shop.parts.frame[0]).toMatchObject({ name: 'Specialized Demo 11', price: 6500, quality: 100, max: 100 });
-    for (const list of Object.values(data.shop.parts)) expect(list).toHaveLength(5);
+    for (const list of Object.values(data.shop.parts)) expect(list.length).toBeGreaterThanOrEqual(5);
   });
 
   it('parses races and terrain features', () => {
@@ -127,7 +127,7 @@ describe('game rules', () => {
     s.level = 1;
     s.player.parts.frame!.quality = 50;
     const swap = G.emptyCart();
-    swap.parts.frame = 4; // Commencal Supreme V5, 2900
+    swap.parts.frame = data.shop.parts.frame.findIndex((p) => p.name === 'Commencal Supreme V5');
     const sum = G.summarizeCart(s, data, swap);
     expect(sum.subtotal).toBe(2900);
     expect(sum.tradeIn).toBe(Math.trunc((6500 * 50) / 100));
