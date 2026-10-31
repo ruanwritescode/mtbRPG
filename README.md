@@ -2,6 +2,12 @@
 
 A game created in C++. Using the terminal as an input/output interface, this game explores the use of classes, objects, file streams, vectors, arrays, terminal commands, randomizers, and more.
 
+## PLAY IN YOUR BROWSER
+
+A graphical version of the game lives in [`web/`](web/README.md) and is served at **https://game.shreddi.bike**.
+It reads the same `maps`, `items` and `races` files as the terminal version. See [`web/README.md`](web/README.md)
+to run it locally or deploy it.
+
 ## HOW TO COMPILE AND RUN
 
 1. Navigate to mtbRPG folder
