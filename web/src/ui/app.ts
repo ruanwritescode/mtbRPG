@@ -20,6 +20,7 @@ import { itemIcon, levelBadge, sectionScene, signIcon, startScene, titleBackgrou
 import { esc, money, ordinal, seconds } from './dom';
 import { cellFromEvent, mapSvg } from './mapSvg';
 import * as Save from './save';
+import { partImage } from './partImages';
 
 type Screen = 'title' | 'load' | 'name' | 'story' | 'map' | 'shop' | 'race' | 'europe' | 'victory' | 'gameover';
 type Tone = 'info' | 'good' | 'bad';
@@ -821,6 +822,12 @@ export class App {
     return `<div class="bar ${cls}"><span style="width:${pct}%"></span>${t}</div>`;
   }
 
+  /** A product photo when one exists, otherwise the drawn icon. */
+  private itemArt(kind: ItemKind, name: string, size: number): string {
+    const url = partImage(name);
+    return url ? `<img class="item-photo" src="${url}" width="${size}" height="${size}" alt="" loading="lazy" />` : itemIcon(kind, size);
+  }
+
   private mini(label: string, value: string, pct: number, cls: string, tick?: number, sub?: string): string {
     return `<div class="mini ${cls === 'none' ? 'missing' : ''}" ${sub ? `title="${sub}"` : ''}><div class="mt"><span>${label}</span><b>${value}</b></div>${this.bar(pct, 100, cls === 'none' ? '' : cls, tick)}</div>`;
   }
@@ -858,9 +865,9 @@ export class App {
         <div class="hud-kpi"><span>Sponsors</span>${pips(g.sponsors, G.START_SPONSORS, 'sponsor')}<small>${g.sponsors} left</small></div>
         <div class="hud-kpi"><span>Injuries</span>${pips(p.injuries, G.MAX_INJURIES, 'injury')}<small>${G.MAX_INJURIES - p.injuries} to go</small></div>
         <div class="hud-supply" title="Spare tires, snacks and toolkits">
-          <span>${itemIcon('tires', 26)}<b>${Math.max(0, p.tires.length - 1)}</b></span>
-          <span>${itemIcon('snacks', 26)}<b>${p.snacks}</b></span>
-          <span>${itemIcon('toolkits', 26)}<b>${p.toolkits}</b></span>
+          <span>${this.itemArt('tires', 'Tire', 26)}<b>${Math.max(0, p.tires.length - 1)}</b></span>
+          <span>${this.itemArt('snacks', 'Snack', 26)}<b>${p.snacks}</b></span>
+          <span>${this.itemArt('toolkits', 'Toolkit', 26)}<b>${p.toolkits}</b></span>
         </div>
       </div>
       <details class="hud-meters" data-sec="meters" ${this.metersOpen ? 'open' : ''}>
@@ -951,7 +958,7 @@ export class App {
         const label = { tires: 'Tire', snacks: 'Trail snack', toolkits: 'Toolkit' }[what];
         const note = { tires: `${G.TIRE_LIFE} sections of tread. Mounted one at a time.`, snacks: 'Restores all four stats a little.', toolkits: 'Repairs every working part a little.' }[what];
         const left = G.maxAdd(p, what);
-        return `<div class="srow ${this.cart[what] ? 'selected' : ''}">${itemIcon(what, 44)}
+        return `<div class="srow ${this.cart[what] ? 'selected' : ''}">${this.itemArt(what, label, 56)}
           <div><div class="name">${label}</div><div class="sub">${note} You have ${have}/${max}.</div></div>
           <div class="price">${money(G.priceAt(G.UNIT_PRICES[what], lvl))}</div>
           <div class="stepper"><button class="btn plain small" data-act="qty" data-what="${what}" data-d="-1" data-key="${what}-" ${this.cart[what] ? '' : 'disabled'} aria-label="Fewer">−</button><output>${this.cart[what]}</output><button class="btn plain small" data-act="qty" data-what="${what}" data-d="1" data-key="${what}+" ${this.cart[what] < left ? '' : 'disabled'} aria-label="More">+</button></div>
@@ -963,7 +970,7 @@ export class App {
       items = data.shop.parts[slot].map((it, i) => {
         const isOwned = owned?.name === it.name;
         const inCart = this.cart.parts[slot] === i;
-        return `<div class="srow ${inCart ? 'selected' : ''} ${isOwned ? 'owned' : ''}">${itemIcon(slot as ItemKind, 44)}
+        return `<div class="srow ${inCart ? 'selected' : ''} ${isOwned ? 'owned' : ''}">${this.itemArt(slot as ItemKind, it.name, 56)}
           <div><div class="name">${esc(it.name)}</div><div class="sub">${isOwned ? `On your bike · ${owned!.quality}/${owned!.max} health` : `Health ${it.max}`}</div></div>
           <div class="price">${money(G.priceAt(it.price, lvl))}</div>
           <button class="btn ${inCart ? 'primary' : 'plain'} small" data-act="part" data-slot="${slot}" data-i="${i}" data-key="${slot}-${i}" ${isOwned ? 'disabled' : ''} aria-pressed="${inCart}">${isOwned ? 'Owned' : inCart ? '✓ In cart' : 'Add'}</button>
@@ -980,11 +987,11 @@ export class App {
       const i = this.cart.parts[slot];
       if (i === undefined) continue;
       const it = data.shop.parts[slot][i];
-      lines.push(`<li class="cline">${itemIcon(slot as ItemKind, 30)}<span><b>${esc(it.name)}</b><small>${PART_LABELS[slot]}${p.parts[slot] ? ' · replaces ' + esc(p.parts[slot]!.name) : ''}</small></span><span class="cp">${money(G.priceAt(it.price, lvl))}<button class="linkish" data-act="uncart" data-k="${slot}" aria-label="Remove ${PART_LABELS[slot]}">Remove</button></span></li>`);
+      lines.push(`<li class="cline">${this.itemArt(slot as ItemKind, it.name, 34)}<span><b>${esc(it.name)}</b><small>${PART_LABELS[slot]}${p.parts[slot] ? ' · replaces ' + esc(p.parts[slot]!.name) : ''}</small></span><span class="cp">${money(G.priceAt(it.price, lvl))}<button class="linkish" data-act="uncart" data-k="${slot}" aria-label="Remove ${PART_LABELS[slot]}">Remove</button></span></li>`);
     }
     for (const what of ['tires', 'snacks', 'toolkits'] as G.Consumable[]) {
       if (!this.cart[what]) continue;
-      lines.push(`<li class="cline">${itemIcon(what, 30)}<span><b>${this.cart[what]} × ${{ tires: 'Tire', snacks: 'Trail snack', toolkits: 'Toolkit' }[what]}</b><small>${money(G.priceAt(G.UNIT_PRICES[what], lvl))} each</small></span><span class="cp">${money(this.cart[what] * G.priceAt(G.UNIT_PRICES[what], lvl))}<button class="linkish" data-act="uncart" data-k="${what}" aria-label="Remove ${what}">Remove</button></span></li>`);
+      lines.push(`<li class="cline">${this.itemArt(what, { tires: 'Tire', snacks: 'Snack', toolkits: 'Toolkit' }[what], 34)}<span><b>${this.cart[what]} × ${{ tires: 'Tire', snacks: 'Trail snack', toolkits: 'Toolkit' }[what]}</b><small>${money(G.priceAt(G.UNIT_PRICES[what], lvl))} each</small></span><span class="cp">${money(this.cart[what] * G.priceAt(G.UNIT_PRICES[what], lvl))}<button class="linkish" data-act="uncart" data-k="${what}" aria-label="Remove ${what}">Remove</button></span></li>`);
     }
     const shortfall = G.sponsorShortfall(g, data);
     const sponsor = shortfall > 0 && g.sponsors > 0 && sum.empty

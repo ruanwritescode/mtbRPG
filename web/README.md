@@ -38,6 +38,16 @@ edits.
 A trail section with no SVG scene (for example one newly added to `races/terrain.txt`) falls back to its ASCII
 art.
 
+## Product photos
+
+Shop items and the title screen use real product photos when they exist in `src/assets/parts/`, named by
+the item's slug (`commencal-supreme-v5.png`, `fox-factory.png`, `tire.png`, `snack.png`, `toolkit.png`;
+see `slug()` in `src/ui/partImages.ts`). Anything without a photo falls back to the drawn icon. PNGs with
+a transparent background look best, because the title screen cuts a white sticker edge around the alpha.
+
+`node scripts/fetch-parts.mjs` downloads them from the pages listed in `scripts/part-sources.json`
+(an image URL, or a product page whose `og:image` is used). Check the licence of anything you ship.
+
 ## Differences from the terminal game
 
 The formulas follow the C++ code. These changes fix crashes, keep the game finishable, or come from playtesting:

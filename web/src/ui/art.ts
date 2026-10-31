@@ -2,6 +2,7 @@
 // start gate. The style is ink line work over flat washes: one ink color, a few consistent stroke weights
 // (contours 2, details 1.3), round caps and joins everywhere, and a muted outdoor palette.
 import { esc } from './dom';
+import { allPartImages } from './partImages';
 
 export interface Difficulty {
   label: string;
@@ -662,6 +663,7 @@ type Placement = [StickerName, number, number, number, number, ...string[]];
 
 const LANDSCAPE: Placement[] = [
   ['wrench', 330, 100, 15, 0.9], ['rotor', 620, 64, 10, 0.8], ['badge', 870, 80, -8, 0.9], ['pin', 1080, 110, 10, 0.8],
+  ['shock', 120, 60, -10, 0.8], ['wheel', 1130, 240, 8, 0.7],
   ['tire', 130, 210, -15, 1], ['snack', 130, 390, 0, 1], ['sign', 110, 560, -6, 0.9, 'circle'], ['frame', 250, 620, 0, 2.9],
   ['trophy', 1040, 250, 8, 1.1], ['flag', 1130, 400, 0, 1, '#1F6FD1'], ['cash', 1030, 520, 0, 1], ['wheel', 1090, 660, 12, 1],
   ['shock', 430, 690, 0, 0.9], ['helmet', 600, 690, -10, 0.8], ['sign', 780, 680, 5, 0.85, 'diamond'], ['checkered', 930, 660, 6, 0.9],
@@ -674,10 +676,22 @@ const PORTRAIT: Placement[] = [
   ['shock', 350, 1040, 0, 0.8], ['helmet', 500, 1050, -10, 0.7], ['sign', 630, 1070, 5, 0.75, 'diamond'], ['checkered', 190, 1070, 6, 0.7],
 ];
 
+/** Sticker slots that real product photos take over when they exist, in the order photos are used. */
+const PHOTO_SLOTS: StickerName[] = ['frame', 'shock', 'rotor', 'wheel', 'tire', 'snack', 'wrench'];
+
 function stickerLayer(id: string, places: Placement[], vw: number, vh: number): string {
+  const photos = allPartImages();
+  // Spread the photos over the part-shaped slots, cycling so every photo gets used across both layouts.
+  let photoIndex = id === 'port' ? Math.floor(photos.length / 2) : 0;
   const items = places.map(([name, x, y, rot, scale, ...args]) => {
     const fn = stickers[name] as (...a: string[]) => string;
-    return `<g filter="url(#sticker-${id})" transform="translate(${x} ${y}) rotate(${rot}) scale(${scale})">${fn(...args)}</g>`;
+    let body = fn(...args);
+    if (photos.length && PHOTO_SLOTS.includes(name)) {
+      const photo = photos[photoIndex++ % photos.length];
+      const size = name === 'frame' ? 130 : 96;
+      body = `<image href="${photo.url}" x="${-size / 2}" y="${-size / 2}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`;
+    }
+    return `<g filter="url(#sticker-${id})" transform="translate(${x} ${y}) rotate(${rot}) scale(${scale})">${body}</g>`;
   }).join('');
   return `<svg class="title-bg-svg ${id}" viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <defs>

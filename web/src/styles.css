@@ -167,7 +167,8 @@ input:focus { outline: 3px solid var(--brand-soft); border-color: var(--brand); 
 .bar.warn span { background: var(--warn); }
 .bar.bad span { background: var(--danger); }
 .bar .tick { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--ink); border-radius: 1px; opacity: 0.55; }
-.item-icon { flex: none; vertical-align: middle; }
+.item-icon, .item-photo { flex: none; vertical-align: middle; }
+.item-photo { object-fit: contain; border-radius: 8px; background: #fff; }
 
 /* ---------------------------------------------------------------- map */
 .map-stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
