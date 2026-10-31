@@ -57,7 +57,11 @@ The formulas follow the C++ code. These changes fix crashes, keep the game finis
 from the **`production`** branch. `wrangler.jsonc` tells Cloudflare to serve the built `dist/` folder as static
 files.
 
-**As a Worker** (what **Workers & Pages → Create → Import a repository** makes now):
+**Simplest setup:** leave Cloudflare's build settings at their defaults (no root directory, deploy command
+`npx wrangler deploy`). The repository root has its own `wrangler.jsonc` and `package.json` that build `web/` and
+upload `web/dist`, so it deploys whatever branch Cloudflare builds.
+
+**As a Worker with explicit settings** (what **Workers & Pages → Create → Import a repository** makes now):
 
 1. Connect `ruanwritescode/mtbRPG`. In the project's **Settings → Build**, set:
 
