@@ -751,11 +751,11 @@ export class App {
   private storyView(): string {
     const g = this.g;
     return `<main class="center-screen"><div class="card story">
-      <h2>Hello ${esc(g.player.name)}!</h2>
-      <p>Welcome to a mountain bike role-playing game. Your goal this season: climb from local races all the way to the World Championship in Val Di Sole, Italy.</p>
-      <p>You’ve picked up <b>${G.START_SPONSORS} new sponsors</b> this year, and to build your bike they’ve offered <b>${money(g.money)}</b> to get you started.</p>
-      <p>Head to your local bike shop to build a fresh bike for the season and stock up on supplies. You’ll need all four parts and at least one tire to race.</p>
-      <button class="btn primary big" data-act="to-shop">Go to the bike shop →</button>
+      <div class="trophy">🚵</div>
+      <h2>Hi ${esc(g.player.name)}!</h2>
+      <p>Race from local events to the World Championship in Val Di Sole.</p>
+      <p>Your <b>${G.START_SPONSORS} sponsors</b> put up <b>${money(g.money)}</b>. Build a bike and stock up: you need all four parts and a tire to race.</p>
+      <button class="btn primary big" data-act="to-shop">Go to the bike shop</button>
     </div></main>`;
   }
 
@@ -807,7 +807,8 @@ export class App {
         <button class="logo small" data-act="menu" aria-label="Menu">mtb<span>RPG</span></button>
         <span class="chip zone">${zone === 'usa' ? '🇺🇸' : '🇪🇺'} ${ZONE_LABELS[zone]}</span>
         <span class="spacer"></span>
-        <button class="btn ghost small" data-act="help">How to play</button>
+        <span class="chip stat-chip-top">⭐ ${g.player.points}</span>
+        <span class="chip stat-chip-top ${g.money < 0 ? 'neg' : ''}">💵 ${money(g.money)}</span>
         <button class="btn ghost small" data-act="menu" aria-label="Open menu">☰ Menu</button>
       </header>
       ${this.hudView(paceLevel)}
@@ -859,9 +860,7 @@ export class App {
     return `<section class="hud" aria-label="Rider">
       <div class="hud-bar">
         <div class="hud-id"><div class="avatar" aria-hidden="true">${esc(p.name.slice(0, 1).toUpperCase())}</div>
-          <div><div class="rider-name">${esc(p.name)}</div><div>${g.level ? levelBadge(g.level) : '<span class="badge">Rookie</span>'}</div></div></div>
-        <div class="hud-kpi"><span>Points</span><b>${p.points}</b><small>${gate}</small></div>
-        <div class="hud-kpi"><span>Money</span><b class="${g.money < 0 ? 'neg' : ''}">${money(g.money)}</b><small>prices ×${G.shopMultiplier(g.level).toFixed(2)}</small></div>
+          <div><div class="rider-name">${esc(p.name)}</div><div class="rider-sub">${g.level ? levelBadge(g.level) : '<span class="badge">Rookie</span>'}${gate ? `<span class="muted"> · ${gate}</span>` : ''}</div></div></div>
         <div class="hud-kpi"><span>Sponsors</span>${pips(g.sponsors, G.START_SPONSORS, 'sponsor')}<small>${g.sponsors} left</small></div>
         <div class="hud-kpi"><span>Injuries</span>${pips(p.injuries, G.MAX_INJURIES, 'injury')}<small>${G.MAX_INJURIES - p.injuries} to go</small></div>
         <div class="hud-supply" title="Spare tires, snacks and toolkits">
