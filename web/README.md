@@ -51,25 +51,30 @@ The formulas follow the C++ code. These changes fix crashes, keep the game finis
   stuck without races to enter.
 - Racing with no tires no longer crashes the game, and a flat tire gets thrown away.
 
-## Deploying to game.shreddi.bike (Cloudflare Pages)
+## Deploying to game.shreddi.bike (Cloudflare)
 
-`shreddi.bike` is a Cloudflare zone, so the game gets its own Pages project on the subdomain.
+`shreddi.bike` is a Cloudflare zone, so the game is its own Cloudflare project on the subdomain. It deploys
+from the **`production`** branch. `wrangler.jsonc` tells Cloudflare to serve the built `dist/` folder as static
+files.
 
-1. In Cloudflare, go to **Workers & Pages → Create → Pages → Connect to Git** and pick `ruanwritescode/mtbRPG`.
-2. Use these build settings:
+**As a Worker** (what **Workers & Pages → Create → Import a repository** makes now):
+
+1. Connect `ruanwritescode/mtbRPG`. In the project's **Settings → Build**, set:
 
    | Setting | Value |
    | --- | --- |
-   | Production branch | `production` |
-   | Root directory | `web` |
+   | Root directory (path) | `web` |
    | Build command | `npm run build` |
-   | Build output directory | `dist` |
-   | Environment variable | `NODE_VERSION` = `22` |
+   | Deploy command | `npx wrangler deploy` |
+   | Branch control → Production branch | `production` |
 
-3. After the first deploy, open the project's **Custom domains** tab, choose **Set up a custom domain** and
-   enter `game.shreddi.bike`. Because the zone is on Cloudflare, it adds the DNS record for you. The
-   certificate is usually ready within a few minutes.
+2. The project name must match `"name"` in `web/wrangler.jsonc` (`mtbrpg`). If the project has a different
+   name, change that line to match.
+3. Under **Settings → Domains & Routes → Add → Custom domain**, enter `game.shreddi.bike`.
 
-Every push to `production` redeploys the live site, and other branches (including `main`) get preview URLs. To ship, merge or push your changes into `production`. `public/_headers` makes the
-hashed files in `/assets` cache forever. Pages needs the whole repository (the build reads `../maps` and the
-other data folders), and it checks out the whole repository by default.
+**As a Pages project** (the older flow): use root directory `web`, build command `npm run build`, build
+output directory `dist`, production branch `production`, and add `game.shreddi.bike` under **Custom domains**.
+
+Every push to `production` redeploys the live site. `public/_headers` makes the hashed files in `/assets`
+cache forever. The build reads `../maps` and the other data folders, so Cloudflare needs the whole
+repository, which it checks out by default.
