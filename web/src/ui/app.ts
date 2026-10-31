@@ -960,7 +960,7 @@ export class App {
       ...PART_SLOTS.map((slot) => {
         const owned = p.parts[slot];
         const need = !owned || owned.quality <= 0;
-        return { key: slot as ItemKind | 'supplies', label: PART_LABELS[slot], icon: slot as ItemKind, note: need ? 'needed' : this.cart.parts[slot] !== undefined ? 'in cart' : `${owned!.quality}/${owned!.max}`, need };
+        return { key: slot as ItemKind | 'supplies', label: PART_LABELS[slot], icon: slot as ItemKind, note: need ? 'needed' : this.cart.parts[slot] !== undefined ? 'in cart' : esc(owned!.name), need };
       }),
       { key: 'supplies', label: 'Supplies', icon: 'tires', note: !p.tires.length ? 'tires needed' : `${this.cart.tires + this.cart.snacks + this.cart.toolkits || ''}${this.cart.tires + this.cart.snacks + this.cart.toolkits ? ' in cart' : ''}`, need: !p.tires.length },
     ];
@@ -974,26 +974,31 @@ export class App {
         const label = { tires: 'Tire', snacks: 'Trail snack', toolkits: 'Toolkit' }[what];
         const note = { tires: `${G.TIRE_LIFE} sections of tread. Mounted one at a time.`, snacks: 'Restores all four stats a little.', toolkits: 'Repairs every working part a little.' }[what];
         const left = G.maxAdd(p, what);
-        return `<div class="srow ${this.cart[what] ? 'selected' : ''}">${this.itemArt(what, label, 56)}
-          <div><div class="name">${label}</div><div class="sub">${note} You have ${have}/${max}.</div></div>
-          <div class="price">${money(G.priceAt(G.UNIT_PRICES[what], lvl))}</div>
-          ${what === 'tires' && data.attrs['Tire'] ? this.attrRows(data.attrs['Tire'], 'row') : ''}
+        return `<div class="pcard ${this.cart[what] ? 'selected' : ''}">
+          <div class="pimg">${this.itemArt(what, label, 120)}</div>
+          <div class="name">${label}</div>
+          <div class="price">${money(G.priceAt(G.UNIT_PRICES[what], lvl))} <small>each</small></div>
+          <div class="sub">${note} You have ${have}/${max}.</div>
+          ${what === 'tires' && data.attrs['Tire'] ? this.attrRows(data.attrs['Tire'], 'stack') : ''}
           <div class="stepper"><button class="btn plain small" data-act="qty" data-what="${what}" data-d="-1" data-key="${what}-" ${this.cart[what] ? '' : 'disabled'} aria-label="Fewer">−</button><output>${this.cart[what]}</output><button class="btn plain small" data-act="qty" data-what="${what}" data-d="1" data-key="${what}+" ${this.cart[what] < left ? '' : 'disabled'} aria-label="More">+</button></div>
         </div>`;
       }).join('');
+      items = `<div class="pgrid">${items}</div>`;
     } else {
       const slot = this.shopCat as PartSlot;
       const owned = p.parts[slot];
       items = data.shop.parts[slot].map((it, i) => {
         const isOwned = owned?.name === it.name;
         const inCart = this.cart.parts[slot] === i;
-        return `<div class="srow ${inCart ? 'selected' : ''} ${isOwned ? 'owned' : ''}">${this.itemArt(slot as ItemKind, it.name, 64)}
-          <div><div class="name">${esc(it.name)}</div><div class="sub">${isOwned ? `On your bike · ${owned!.quality}/${owned!.max} health` : `Health ${it.max}`}</div></div>
-          <div class="price">${money(G.priceAt(it.price, lvl))}</div>
-          ${it.attrs ? this.attrRows(it.attrs, 'row') : ''}
+        return `<div class="pcard ${inCart ? 'selected' : ''} ${isOwned ? 'owned' : ''}">
+          <div class="pimg">${this.itemArt(slot as ItemKind, it.name, 120)}</div>
+          <div class="name">${esc(it.name)}</div>
+          <div class="price">${money(G.priceAt(it.price, lvl))}${isOwned ? ' <small>on your bike</small>' : ''}</div>
+          ${it.attrs ? this.attrRows(it.attrs, 'stack') : ''}
           <button class="btn ${inCart ? 'primary' : 'plain'} small" data-act="part" data-slot="${slot}" data-i="${i}" data-key="${slot}-${i}" ${isOwned ? 'disabled' : ''} aria-pressed="${inCart}">${isOwned ? 'Owned' : inCart ? '✓ In cart' : 'Add'}</button>
         </div>`;
       }).join('');
+      items = `<div class="pgrid">${items}</div>`;
       if (owned && this.cart.parts[slot] !== undefined) {
         const tradeIn = Math.trunc(owned.price * G.shopMultiplier(lvl) * owned.quality / 100);
         items += `<p class="muted small">Your ${esc(owned.name)} sells on the used market for ${money(tradeIn)}, taken off the total.</p>`;
