@@ -791,8 +791,8 @@ export class App {
         <button class="logo small" data-act="menu" aria-label="Menu">mtb<span>RPG</span></button>
         <span class="chip zone">${zone === 'usa' ? '🇺🇸' : '🇪🇺'} ${ZONE_LABELS[zone]}</span>
         <span class="spacer"></span>
-        <span class="chip">${money(g.money)}</span>
-        <span class="chip">${g.player.points} pts</span>
+        <span class="chip stat-chip-top">${money(g.money)}</span>
+        <span class="chip stat-chip-top">${g.player.points} pts</span>
         <button class="btn ghost small" data-act="menu" aria-label="Open menu">☰</button>
       </header>
       ${this.hudView(paceLevel)}
@@ -828,7 +828,7 @@ export class App {
       `<span class="pips ${cls}" title="${title}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
     const req = G.requiredPoints(g.level);
     const gate = g.phase === 'usa' || g.phase === 'europe'
-      ? (G.currentMap(g).races.length ? (p.points >= req ? 'Qualified for the next flag' : `Next flag needs ${req}`) : 'Final race unlocked')
+      ? (G.currentMap(g).races.length ? (p.points >= req ? 'Qualified for next flag' : `${req} needed for next flag`) : 'Final race unlocked')
       : '';
     return `<aside class="hud" aria-label="Rider">
       <div class="hud-head">
@@ -837,14 +837,14 @@ export class App {
       </div>
       <div class="kpis">
         <div><span>Points</span><b>${p.points}</b><small>${gate}</small></div>
-        <div><span>Money</span><b class="${g.money < 0 ? 'neg' : ''}">${money(g.money)}</b><small>Prices ×${G.shopMultiplier(g.level).toFixed(2)}</small></div>
+        <div><span>Money</span><b class="${g.money < 0 ? 'neg' : ''}">${money(g.money)}</b><small>Shop prices ×${G.shopMultiplier(g.level).toFixed(2)}</small></div>
       </div>
       <div class="status-row">
         <div><span>Sponsors</span>${pips(g.sponsors, G.START_SPONSORS, 'sponsor', `${g.sponsors} sponsors left`)}</div>
         <div><span>Injuries</span>${pips(p.injuries, G.MAX_INJURIES, 'injury', `${p.injuries} of ${G.MAX_INJURIES} injuries`)}</div>
       </div>
-      <details class="hud-sec" data-sec="rider" ${this.hudOpen.rider ? 'open' : ''}><summary>Rider <small class="muted">pace ${pace}</small></summary>${stats}</details>
-      <details class="hud-sec" data-sec="bike" ${this.hudOpen.bike ? 'open' : ''}><summary>Bike <small class="muted">health ${G.bikeHealth(p)}</small></summary>${parts}${tire}</details>
+      <details class="hud-sec" data-sec="rider" ${this.hudOpen.rider ? 'open' : ''}><summary>Rider <small class="muted" title="Stats above the pace gain time in the next race; below it they lose time">pace ${pace}</small></summary>${stats}<p class="meter-note"><i class="tick-key"></i> Race pace ${pace}. Stats above it gain time.</p></details>
+      <details class="hud-sec" data-sec="bike" ${this.hudOpen.bike ? 'open' : ''}><summary>Bike <small class="muted" title="Average part health. Above 30 gains time in a race">health ${G.bikeHealth(p)}</small></summary>${parts}${tire}</details>
       <div class="supplies">
         <div title="Spare tires"><b>${Math.max(0, p.tires.length - 1)}</b><span>spare tires</span></div>
         <div title="Snacks"><b>${p.snacks}</b><span>snacks</span></div>
@@ -863,32 +863,34 @@ export class App {
     const finalRace = data.raceList.find((r) => r.level === G.FINAL_LEVEL[zone]);
     let here: string;
     if (loc === 'shop') {
-      here = `<h3>🔧 Bike shop</h3><p>It looks like there is a bike shop in this town! Do you need any new parts?</p>
+      here = `<h3>🔧 Bike shop</h3><p>There’s a bike shop in this town. Parts, tires, snacks and toolkits.</p>
         <button class="btn primary" data-act="interact">Visit shop <kbd>Enter</kbd></button>`;
     } else if (loc === 'race') {
       const ok = g.player.points >= req;
-      here = `<h3>${signIcon(g.level + 1, 16)} Race day</h3><p>A level ${g.level + 1} race is on here.${ok ? '' : ` Earn <b>${req}</b> qualification points to enter (you have ${g.player.points}).`}</p>
+      here = `<h3>${signIcon(g.level + 1, 16)} Level ${g.level + 1} qualifier</h3><p>${ok ? 'Win or podium here to level up.' : `You need <b>${req}</b> points to enter and have ${g.player.points}. Local races earn points.`}</p>
         <button class="btn primary" data-act="interact" ${ok ? '' : 'disabled'}>Enter race <kbd>Enter</kbd></button>`;
     } else if (loc === 'final') {
       const open = map.races.length === 0;
       here = `<h3>🏁 ${esc(finalRace?.name ?? 'Final race')}</h3><p>${open ? 'The final is open. Win or podium it to finish the region!' : `Complete all other races on the map to enter (${map.races.length} left).`}</p>
         <button class="btn primary" data-act="interact" ${open ? '' : 'disabled'}>Enter the final <kbd>Enter</kbd></button>`;
     } else {
-      here = `<h3>Open trail</h3><p>${g.level === 0 ? 'Ride to a flag to enter your first race.' : 'Explore to find bike shops, or enter a local race for points and money.'}</p>`;
+      here = g.level === 0
+        ? `<h3>Open trail</h3><p>Ride to a flag to enter your first qualifier. Tap the map or use the arrow keys.</p>`
+        : `<h3>Open trail</h3><p>Enter a local race for points and money, or keep exploring to find bike shops.</p>
+        <button class="btn primary" data-act="local" ${G.raceBlocker(g.player) ? 'disabled' : ''}>Enter a local race <kbd>1</kbd></button>`;
     }
     const blocker = G.raceBlocker(g.player);
     const p = g.player;
     const actions = `<div class="actions">
-      <button class="btn plain" data-act="local" ${loc !== 'open' ? 'disabled' : ''}><kbd>1</kbd> Local race</button>
-      <button class="btn plain" data-act="eat" ${p.snacks ? '' : 'disabled'}><kbd>2</kbd> Eat snack <small>${p.snacks}</small></button>
-      <button class="btn plain" data-act="repair" ${p.toolkits ? '' : 'disabled'}><kbd>3</kbd> Use toolkit <small>${p.toolkits}</small></button>
-      <button class="btn plain" data-act="save"><kbd>4</kbd> Save</button>
+      <button class="btn plain" data-act="eat" ${p.snacks ? '' : 'disabled'} title="Restores all four stats"><kbd>2</kbd> Eat a snack <small>${p.snacks} left</small></button>
+      <button class="btn plain" data-act="repair" ${p.toolkits ? '' : 'disabled'} title="Repairs every working part"><kbd>3</kbd> Use a toolkit <small>${p.toolkits} left</small></button>
+      <button class="btn plain" data-act="save"><kbd>4</kbd> Save game</button>
     </div>`;
     const log = this.log.map((m) => `<li class="${m.tone}">${esc(m.text)}</li>`).join('');
     return `<div class="map-stage">
       <div class="map-wrap">
         ${mapSvg(t, map, { nextLevel: g.level + 1, finalOpen: map.races.length === 0, path: this.walkPath, from: this.from ?? undefined })}
-        <div class="legend"><span><i class="lg you"></i>You</span><span>${signIcon(g.level + 1, 12)}Race</span><span><i class="lg shop"></i>Shop</span><span>🏁 Final</span><span><i class="lg won"></i>Won</span><span><i class="lg trail"></i>Ridden</span></div>
+        <div class="legend"><span><i class="lg you"></i>You</span><span>${signIcon(g.level + 1, 12)}Qualifier</span><span><i class="lg shop"></i>Shop</span><span>🏁 Final</span><span><i class="lg won"></i>Won</span><span><i class="lg trail"></i>Ridden</span></div>
       </div>
       <div class="panel">
         <div class="here card">${here}</div>
@@ -901,7 +903,7 @@ export class App {
           <button class="btn plain" data-act="dpad" data-dir="right" data-key="right" aria-label="Right">▶</button>
         </div>
         <ul class="log" aria-live="polite">${log}</ul>
-        <p class="hint muted small">Move with WASD / arrows or tap the map · Esc for menu</p>
+        <p class="hint muted small"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to move · tap the map to ride there · <kbd>Esc</kbd> menu · <button class="linkish" data-act="help">How to play</button></p>
       </div>
     </div>`;
   }
@@ -917,7 +919,7 @@ export class App {
         const inCart = this.cart.parts[slot] === i;
         return `<button class="item ${inCart ? 'selected' : ''} ${isOwned ? 'owned' : ''}" data-act="part" data-slot="${slot}" data-i="${i}" data-key="${slot}-${i}" ${isOwned ? 'disabled' : ''} aria-pressed="${inCart}">
           <span class="item-name">${esc(it.name)}</span>
-          <span class="item-q">${isOwned ? `Owned · ${owned!.quality}/${owned!.max}` : `Quality ${it.max}`}</span>
+          <span class="item-q">${isOwned ? `On your bike · ${owned!.quality}/${owned!.max} health` : `Health ${it.max}`}</span>
           <span class="item-price">${money(G.priceAt(it.price, lvl))}</span></button>`;
       }).join('');
       return `<div class="dept"><h4>${PART_LABELS[slot]}${owned ? '' : ' <span class="need">needed</span>'}</h4>${rows}</div>`;
@@ -962,7 +964,7 @@ export class App {
           <dt class="total">Total</dt><dd class="total">${money(sum.total)}</dd>
           <dt>After checkout</dt><dd class="${after < 0 ? 'neg' : ''}">${money(after)}</dd></dl>
           ${!sum.canAfford ? '<p class="warn small">Whoops! You don’t have enough funds for this cart.</p>' : ''}
-          <button class="btn primary block" data-act="checkout" ${sum.empty || !sum.canAfford ? 'disabled' : ''}>Checkout</button>
+          <button class="btn primary block" data-act="checkout" ${sum.empty || !sum.canAfford ? 'disabled' : ''}>${sum.empty ? 'Checkout' : `Checkout · ${money(sum.total)}`}</button>
         </aside>
       </div>
     </div>`;
@@ -975,13 +977,13 @@ export class App {
     if (!s) return '';
     const r = s.race;
     const head = `<div class="race-head">
-        <div><h2>${esc(r.name)}</h2><div class="muted">${levelBadge(r.level)} · ${r.length} sections${r.club ? ' · club race' : ''}</div></div>
+        <div><h2>${esc(r.name)}</h2><div class="muted race-meta">${levelBadge(r.level)} · ${r.length} sections${r.club ? ' · club race' : ''} · <span title="Stats above this gain time, below it lose time">pace ${G.turningPoint(r.level)}</span></div></div>
         ${this.raceView === 'ride' ? `<div class="split ${s.gap > 0 ? 'ahead' : s.gap < 0 ? 'behind' : ''}"><span>Split</span><b>${seconds(s.gap)}</b></div>` : ''}
       </div>`;
     if (this.raceView === 'start') {
       return `<div class="race">${head}
         <div class="scene">${startScene(r.endcap) ?? `<pre class="ascii">${esc(data.starts[r.endcap] ?? '')}</pre>`}</div>
-        <div class="race-start"><p>Pace for this race: stats above <b>${G.turningPoint(r.level)}</b> gain time. Bike health above 30 gains time too.</p>
+        <div class="race-start"><p>Pick a line in each section. Stats above <b>${G.turningPoint(r.level)}</b> gain time, bike health above 30 gains time. Finish ahead to win.</p>
         <button class="btn primary big" data-act="drop-in">Drop in <kbd>Enter</kbd></button></div></div>`;
     }
     const feat = data.terrain[s.feature];
@@ -992,9 +994,9 @@ export class App {
       let chip = '';
       if (o.modifier === 'strength' || o.modifier === 'skill' || o.modifier === 'endurance') {
         const v = p[o.modifier];
-        chip = `<span class="stat-chip ${v >= pace ? 'good' : 'bad'}">${STAT_LABELS[o.modifier]} ${v}${v >= pace ? ' · faster' : ' · slower'}</span>`;
+        chip = `<span class="stat-chip ${v >= pace ? 'good' : 'bad'}">${STAT_LABELS[o.modifier]} ${v} · ${v >= pace ? 'gains time' : 'loses time'}</span>`;
       } else if (o.modifier === 'time') chip = '<span class="stat-chip neutral">Safe · loses 0.75s</span>';
-      else if (o.modifier === 'bike') chip = `<span class="stat-chip neutral">Bike health ${G.bikeHealth(p)} · all parts take a beating</span>`;
+      else if (o.modifier === 'bike') chip = `<span class="stat-chip neutral">Bike health ${G.bikeHealth(p)} · wears every part</span>`;
       const riskChip = risk > 0 ? `<span class="stat-chip risk">⚠ ${Math.round(risk * 100)}% injury risk</span>` : '';
       return `<button class="choice" data-act="line" data-n="${i + 1}" data-key="line-${i + 1}"><kbd>${i + 1}</kbd><span class="choice-label">${esc(o.label)}</span><span class="chips">${chip}${riskChip}</span></button>`;
     }).join('');
@@ -1009,7 +1011,7 @@ export class App {
       <h3 class="feature-title">${esc(feat.title)}</h3>
       <div class="choices">${choices}</div>
       ${this.lastOutcome(s)}
-      <div class="race-foot"><button class="btn ghost small" data-act="quit-race">Quit race (Esc)</button></div>
+      <div class="race-foot"><span class="muted small">${feat.options.length > 1 ? `Press <kbd>1</kbd>–<kbd>${feat.options.length}</kbd> to choose a line` : 'Press <kbd>1</kbd> to ride it out'}</span><button class="btn ghost small" data-act="quit-race">Quit race <kbd>Esc</kbd></button></div>
     </div>`;
   }
 
@@ -1022,7 +1024,7 @@ export class App {
     if (o.stat) bits.push(`${STAT_LABELS[o.stat.name]} ${o.stat.before}→${o.stat.after}`);
     for (const dm of o.damage) if (dm.after < dm.before) bits.push(`${PART_LABELS[dm.slot]} −${dm.before - dm.after}`);
     bits.push(`Tread ${o.tireLife}`);
-    return `<div class="last">Last section · ${esc(feat.title)} (${esc(feat.options[o.choice - 1]?.label ?? '')}): ${bits.join(' · ')}</div>`;
+    return `<div class="last"><b>Last section</b> ${esc(feat.title)} — ${esc(feat.options[o.choice - 1]?.label ?? '')} <span class="last-bits">${bits.join('<i>·</i>')}</span></div>`;
   }
 
   private resultView(): string {
