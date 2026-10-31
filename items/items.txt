@@ -1,7 +1,7 @@
+Specialized Demo 11,6500,100
 Santa Cruz V10,5200,100
 Pivot Phoenix,4900,95
 Intense M1,3800,85
-Specialized Demo,3200,80
 Commencal Supreme V5,2900,75
 
 FOX Factory,2150,100

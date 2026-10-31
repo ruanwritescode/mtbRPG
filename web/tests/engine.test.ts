@@ -17,7 +17,7 @@ describe('data files', () => {
   });
 
   it('parses the shop inventory', () => {
-    expect(data.shop.parts.frame[0]).toMatchObject({ name: 'Santa Cruz V10', price: 5200, quality: 100, max: 100 });
+    expect(data.shop.parts.frame[0]).toMatchObject({ name: 'Specialized Demo 11', price: 6500, quality: 100, max: 100 });
     for (const list of Object.values(data.shop.parts)) expect(list).toHaveLength(5);
   });
 
@@ -120,9 +120,9 @@ describe('game rules', () => {
     const cart = G.emptyCart();
     cart.parts.frame = 0;
     cart.tires = 2;
-    expect(G.summarizeCart(s, data, cart)).toMatchObject({ subtotal: 5390, tradeIn: 0, canAfford: true });
+    expect(G.summarizeCart(s, data, cart)).toMatchObject({ subtotal: 6690, tradeIn: 0, canAfford: true });
     expect(G.checkout(s, data, cart)).toBe(true);
-    expect(s.money).toBe(8000 - 5390);
+    expect(s.money).toBe(8000 - 6690);
     expect(s.player.tires).toEqual([20, 20]);
     s.level = 1;
     s.player.parts.frame!.quality = 50;
@@ -130,7 +130,7 @@ describe('game rules', () => {
     swap.parts.frame = 4; // Commencal Supreme V5, 2900
     const sum = G.summarizeCart(s, data, swap);
     expect(sum.subtotal).toBe(2900);
-    expect(sum.tradeIn).toBe(Math.trunc((5200 * 50) / 100));
+    expect(sum.tradeIn).toBe(Math.trunc((6500 * 50) / 100));
   });
 
   it('blocks racing without a complete bike and tires', () => {
