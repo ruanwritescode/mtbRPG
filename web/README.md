@@ -60,7 +60,7 @@ The formulas follow the C++ code. These changes fix crashes, keep the game finis
 
    | Setting | Value |
    | --- | --- |
-   | Production branch | `main` |
+   | Production branch | `production` |
    | Root directory | `web` |
    | Build command | `npm run build` |
    | Build output directory | `dist` |
@@ -70,6 +70,6 @@ The formulas follow the C++ code. These changes fix crashes, keep the game finis
    enter `game.shreddi.bike`. Because the zone is on Cloudflare, it adds the DNS record for you. The
    certificate is usually ready within a few minutes.
 
-Every push to `main` redeploys the site, and other branches get preview URLs. `public/_headers` makes the
+Every push to `production` redeploys the live site, and other branches (including `main`) get preview URLs. To ship, merge or push your changes into `production`. `public/_headers` makes the
 hashed files in `/assets` cache forever. Pages needs the whole repository (the build reads `../maps` and the
 other data folders), and it checks out the whole repository by default.
