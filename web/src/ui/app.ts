@@ -19,7 +19,8 @@ import {
   type RaceSession,
   type StatName,
 } from '../engine/types';
-import { itemIcon, levelBadge, sectionScene, signIcon, startScene, titleBackground, type ItemKind } from './art';
+import { itemIcon, levelBadge, signIcon, startScene, titleBackground, type ItemKind } from './art';
+import { LANE_GLYPH, LANE_KEY, lanesFor, povScene } from './pov';
 import { esc, money, ordinal, seconds } from './dom';
 import { cellFromEvent, mapSvg } from './mapSvg';
 import * as Save from './save';
@@ -60,6 +61,7 @@ export class App {
   private toastTimer: number | null = null;
   private firstShop = false;
   /** Whether the stat meters are expanded; collapsed by default on phones so the map stays in view. */
+  private picking = false;
   private metersOpen = !window.matchMedia?.('(max-width: 820px)').matches;
   private shopCat: ItemKind | 'supplies' = 'frame';
   /** Phone layout: the map is a zoomed camera on the rider unless the full map is toggled on. */
@@ -222,9 +224,13 @@ export class App {
         if (this.raceView === 'start' && (k === 'Enter' || k === ' ')) {
           e.preventDefault();
           this.act('drop-in', {});
-        } else if (this.raceView === 'ride' && keyNum) {
-          const opts = data.terrain[this.g.activeRace!.feature].options;
-          if (keyNum <= opts.length) this.act('line', { n: String(keyNum) });
+        } else if (this.raceView === 'ride' && k !== 'Escape') {
+          const feat = data.terrain[this.g.activeRace!.feature];
+          let n = keyNum;
+          if (!n && LANE_KEY[k]) n = lanesFor(feat).indexOf(LANE_KEY[k]) + 1;
+          if (!n && (k === 'Enter' || k === ' ') && feat.options.length === 1) n = 1;
+          if (LANE_KEY[k] || k === ' ') e.preventDefault();
+          if (n >= 1 && n <= feat.options.length) this.act('line', { n: String(n) });
         } else if (this.raceView === 'ride' && k === 'Escape') this.act('quit-race', {});
         else if (this.raceView === 'result' && (k === 'Enter' || k === ' ')) {
           e.preventDefault();
@@ -354,7 +360,7 @@ export class App {
         this.commit();
         return;
       case 'line':
-        this.rideLine(Number(ds.n));
+        this.pickLine(Number(ds.n));
         return;
       case 'quit-race':
         this.confirm(
@@ -528,6 +534,19 @@ export class App {
         'Risk it',
       );
     }
+  }
+
+  /** Light up the chosen lane and tile for a moment, then ride it. */
+  private pickLine(n: number) {
+    const s = this.g.activeRace;
+    if (this.picking || !s || s.status !== 'running') return;
+    this.picking = true;
+    this.root.querySelectorAll(`.race [data-act="line"][data-n="${n}"]`).forEach((el) => el.classList.add('picked'));
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    setTimeout(() => {
+      this.picking = false;
+      this.rideLine(n);
+    }, reduced ? 0 : 200);
   }
 
   private rideLine(n: number) {
@@ -1108,6 +1127,7 @@ export class App {
     const feat = data.terrain[s.feature];
     const pace = G.turningPoint(r.level);
     const p = g.player;
+    const lanes = lanesFor(feat);
     const choices = feat.options.map((o, i) => {
       const risk = G.crashRisk(p, o.modifier, r.level);
       let chip = '';
@@ -1117,20 +1137,22 @@ export class App {
       } else if (o.modifier === 'time') chip = '<span class="stat-chip neutral">Safe · loses 0.75s</span>';
       else if (o.modifier === 'bike') chip = `<span class="stat-chip neutral">Bike health ${G.bikeHealth(p)} · wears every part</span>`;
       const riskChip = risk > 0 ? `<span class="stat-chip risk">⚠ ${Math.round(risk * 100)}% injury risk</span>` : '';
-      return `<button class="choice" data-act="line" data-n="${i + 1}" data-key="line-${i + 1}"><kbd>${i + 1}</kbd><span class="choice-label">${esc(o.label)}</span><span class="chips">${chip}${riskChip}</span></button>`;
+      const lane = lanes[i];
+      const key = lane ? `<kbd class="arrow" aria-label="${lane}">${LANE_GLYPH[lane]}</kbd>` : `<kbd>${i + 1}</kbd>`;
+      return `<button class="choice lane-${lane ?? 'extra'}" data-act="line" data-n="${i + 1}" data-key="line-${i + 1}"><span class="choice-head">${key}<span class="choice-label">${esc(o.label)}</span></span><span class="chips">${chip}${riskChip}</span></button>`;
     }).join('');
-    const art = sectionScene(s.feature) ?? `<pre class="ascii">${esc(feat.art)}</pre>`;
     const progress = `<div class="progress" aria-label="Section ${s.section + 1} of ${r.length}">${Array.from({ length: r.length }, (_, i) => {
       const split = s.splits[i];
       const cls = i < s.section ? (split > 0 ? 'ahead' : 'behind') : i === s.section ? 'now' : '';
       return `<i class="${cls}"></i>`;
     }).join('')}</div>`;
+    const keys = (['left', 'straight', 'right'] as const).filter((l) => lanes.includes(l)).map((l) => `<kbd>${LANE_GLYPH[l]}</kbd>`).join('');
+    const hint = feat.options.length > 1 ? `Pick a line with ${keys} or tap a trail` : `Press ${keys} to ride it out`;
     return `<div class="race">${head}${progress}
-      <div class="scene">${art}<div class="section-label">Section ${s.section + 1} / ${r.length}</div></div>
-      <h3 class="feature-title">${esc(feat.title)}</h3>
-      <div class="choices">${choices}</div>
+      <div class="scene">${povScene(feat, s.feature)}<div class="section-label">Section ${s.section + 1} / ${r.length} · ${esc(feat.title)}</div></div>
+      <div class="choices lanes">${choices}</div>
       ${this.lastOutcome(s)}
-      <div class="race-foot"><span class="muted small">${feat.options.length > 1 ? `Press <kbd>1</kbd>–<kbd>${feat.options.length}</kbd> to choose a line` : 'Press <kbd>1</kbd> to ride it out'}</span><button class="btn ghost small" data-act="quit-race">Quit race <kbd>Esc</kbd></button></div>
+      <div class="race-foot"><span class="muted small">${hint}</span><button class="btn ghost small" data-act="quit-race">Quit race <kbd>Esc</kbd></button></div>
     </div>`;
   }
 

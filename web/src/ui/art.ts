@@ -1,5 +1,5 @@
-// SVG artwork: difficulty badges, the rider and bike, and an illustrated scene for every trail section and
-// start gate. The style is ink line work over flat washes: one ink color, a few consistent stroke weights
+// SVG artwork: difficulty badges, the frame drawing, start gates, title stickers and the shared drawing
+// helpers the first-person trail scenes (pov.ts) use. The style is ink line work over flat washes: one ink color, a few consistent stroke weights
 // (contours 2, details 1.3), round caps and joins everywhere, and a muted outdoor palette.
 import { esc } from './dom';
 import { allPartImages } from './partImages';
@@ -49,10 +49,10 @@ export function levelBadge(level: number): string {
 
 // ---------------------------------------------------------------- palette and helpers
 
-const INK = '#2B2E33';
+export const INK = '#2B2E33';
 const W = 800;
 const H = 360;
-const C = {
+export const C = {
   skyTop: '#D6E4EA',
   skyBottom: '#F1EFE6',
   far: '#C7D2D6',
@@ -77,7 +77,7 @@ const C = {
 };
 
 /** Small deterministic random generator so scattered detail is the same on every render. */
-function rng(seed: number): () => number {
+export function rng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (Math.imul(a, 1664525) + 1013904223) >>> 0;
@@ -85,24 +85,24 @@ function rng(seed: number): () => number {
   };
 }
 
-const r1 = (v: number) => Math.round(v * 10) / 10;
+export const r1 = (v: number) => Math.round(v * 10) / 10;
 
 /** A closed polygon with an ink outline. */
-function poly(points: [number, number][], fill: string, sw = 2, extra = ''): string {
+export function poly(points: [number, number][], fill: string, sw = 2, extra = ''): string {
   const d = points.map(([x, y], i) => `${i ? 'L' : 'M'}${r1(x)} ${r1(y)}`).join('') + 'Z';
   return `<path d="${d}" fill="${fill}" stroke="${INK}" stroke-width="${sw}" stroke-linejoin="round" ${extra}/>`;
 }
 
-function ink(d: string, sw = 1.3, extra = ''): string {
+export function ink(d: string, sw = 1.3, extra = ''): string {
   return `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" ${extra}/>`;
 }
 
 /** Diagonal hatching to suggest shadow on a face; `d` is the area's outline. */
-function hatch(id: string, d: string, opacity = 0.35): string {
+export function hatch(id: string, d: string, opacity = 0.35): string {
   return `<path d="${d}" fill="url(#hatch-${id})" opacity="${opacity}"/>`;
 }
 
-function defs(id: string): string {
+export function defs(id: string): string {
   return `<defs>
     <linearGradient id="sky-${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.skyTop}"/><stop offset="1" stop-color="${C.skyBottom}"/></linearGradient>
     <pattern id="hatch-${id}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><line x1="0" y1="0" x2="0" y2="7" stroke="${INK}" stroke-width="1"/></pattern>
@@ -111,7 +111,7 @@ function defs(id: string): string {
 }
 
 /** Distant ridges with ink contour lines and snow on the high peaks. */
-function ridges(): string {
+export function ridges(): string {
   const far: [number, number][] = [[0, 160], [55, 128], [105, 142], [165, 98], [215, 124], [275, 108], [335, 136], [395, 90], [445, 118], [500, 104], [555, 128], [615, 108], [670, 130], [730, 112], [800, 126]];
   const farD = far.map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join('');
   const snow = [[165, 98], [395, 90]].map(([x, y]) => `<path d="M${x - 16} ${y + 12} L${x - 9} ${y + 6} L${x - 5} ${y + 10} L${x} ${y} L${x + 5} ${y + 9} L${x + 10} ${y + 5} L${x + 16} ${y + 12}" fill="${C.snow}" stroke="${INK}" stroke-width="1" stroke-linejoin="round"/>`).join('');
@@ -140,7 +140,7 @@ function ridges(): string {
     <path d="${midD}" fill="none" stroke="${INK}" stroke-width="1.2" opacity=".6"/>`;
 }
 
-function clouds(): string {
+export function clouds(): string {
   const cloud = (x: number, y: number, s: number) =>
     `<g transform="translate(${x} ${y}) scale(${s})"><path d="M-30 6 C-34 -2 -26 -8 -18 -6 C-16 -16 0 -18 4 -9 C12 -14 24 -8 22 0 C30 0 32 6 26 8 Z" fill="#FBFBF8" stroke="${INK}" stroke-width="1" stroke-linejoin="round" opacity=".9"/></g>`;
   return cloud(150, 52, 1) + cloud(560, 40, 1.3) + cloud(700, 70, 0.7);
@@ -161,7 +161,7 @@ function ground(y = 230, seed = 3): string {
 }
 
 /** A conifer with layered, jagged tiers; the right side is in shadow. */
-function conifer(x: number, y: number, s = 1, seed = 1): string {
+export function conifer(x: number, y: number, s = 1, seed = 1): string {
   const rand = rng(seed * 31 + 11);
   let out = `<path d="M-3 0 L-2.2 -12 L2.2 -12 L3 0Z" fill="${C.trunk}" stroke="${INK}" stroke-width="1.3" stroke-linejoin="round"/>`;
   const tiers = 4;
@@ -188,7 +188,7 @@ function conifer(x: number, y: number, s = 1, seed = 1): string {
 }
 
 /** A deciduous tree with a lobed canopy. */
-function broadleaf(x: number, y: number, s = 1): string {
+export function broadleaf(x: number, y: number, s = 1): string {
   return `<g transform="translate(${x} ${y}) scale(${s})">
     <path d="M-3 0 L-2 -18 L-8 -28 M-2 -18 L2 -18 L8 -30 M2 -18 L3 0 M0 -18 L0 -30" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>
     <path d="M-3 0 L-2 -18 L2 -18 L3 0Z" fill="${C.trunk}"/>
@@ -198,7 +198,7 @@ function broadleaf(x: number, y: number, s = 1): string {
 }
 
 /** A faceted rock with a lit top and shaded side. */
-function rock(x: number, y: number, s = 1, seed = 1): string {
+export function rock(x: number, y: number, s = 1, seed = 1): string {
   const rand = rng(seed * 17 + 5);
   const pts: [number, number][] = [];
   const n = 6;
@@ -219,42 +219,20 @@ function rock(x: number, y: number, s = 1, seed = 1): string {
   </g>`;
 }
 
-function fern(x: number, y: number, s = 1, flip = false): string {
+export function fern(x: number, y: number, s = 1, flip = false): string {
   const fronds = [-40, -15, 10, 35].map((deg) => `<path d="M0 0 Q6 -18 2 -34" transform="rotate(${deg})"/><path d="M1 -8l-4 -3M2 -14l-4 -3M2.5 -20l-4 -3M2.5 -26l-4 -3M1 -8l4 -3M2 -14l4 -3M2.5 -20l4 -3M2.5 -26l4 -3" transform="rotate(${deg})"/>`).join('');
   return `<g transform="translate(${x} ${y}) scale(${flip ? -s : s} ${s})" fill="none" stroke="${C.leafDark}" stroke-width="1.5" stroke-linecap="round">${fronds}</g>`;
 }
 
-/** Numbered marker matching a choice button. */
-function pin(n: number, x: number, y: number): string {
-  return `<g class="pin" transform="translate(${x} ${y})">
-    <path d="M0 14 L-5 4 A11 11 0 1 1 5 4Z" fill="#FBFAF6" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-    <text y="4" text-anchor="middle" font-size="14" font-weight="800" font-family="system-ui, sans-serif" fill="${INK}">${n}</text>
-  </g>`;
-}
 
 /** A suggested riding line. */
-function line(d: string, tone: 'fast' | 'safe' | 'risky' = 'fast'): string {
+export function line(d: string, tone: 'fast' | 'safe' | 'risky' = 'fast'): string {
   const color = tone === 'fast' ? '#FBFAF6' : tone === 'safe' ? '#F3C96B' : INK;
   return `<path d="${d}" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round" opacity=".5"/>
     <path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-dasharray="1 8" stroke-linecap="round"/>`;
 }
 
-/** A dirt trail ribbon along a centre line, with an ink edge, a worn centre and a shaded lower edge. */
-function ribbon(id: string, d: string, width: number): string {
-  return `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${width + 3}" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${d}" fill="none" stroke="${C.dirt}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${d}" fill="none" stroke="${C.dirtLight}" stroke-width="${width * 0.45}" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
-    <path d="${d}" fill="none" stroke="url(#dots-${id})" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" opacity=".25"/>`;
-}
 
-/** A trail drawn in perspective as a polygon, with hatched shadow on one edge. */
-function trailPoly(id: string, pts: [number, number][], shade?: [number, number][]): string {
-  const d = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join('') + 'Z';
-  const sh = shade ? shade.map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join('') + 'Z' : '';
-  return `<path d="${d}" fill="${C.dirt}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-    <path d="${d}" fill="url(#dots-${id})" opacity=".2"/>
-    ${sh ? `<path d="${sh}" fill="${C.dirtDark}" opacity=".5"/>${hatch(id, sh, 0.3)}` : ''}`;
-}
 
 function frame(id: string, body: string, opts: { label: string; hills?: boolean; align?: string; sky?: boolean }): string {
   const hills = opts.hills === false ? '' : ridges();
@@ -267,7 +245,7 @@ function frame(id: string, body: string, opts: { label: string; hills?: boolean;
   </svg>`;
 }
 
-// ---------------------------------------------------------------- rider and bike
+// ---------------------------------------------------------------- bike frame
 
 function wheel(cx: number, cy: number): string {
   const spokes = Array.from({ length: 10 }, (_, i) => {
@@ -349,160 +327,6 @@ export function frameArt(x: number, y: number, scale = 1, rotate = 0): string {
   </g>`;
 }
 
-// ---------------------------------------------------------------- scenes
-
-function lineChoice(): string {
-  const id = 'line';
-  const rand = rng(21);
-  let rocks = '';
-  const spots: [number, number, number][] = [[250, 338, 1.5], [292, 306, 1.2], [236, 290, 1], [300, 268, 0.85], [268, 250, 0.7], [305, 238, 0.55], [246, 318, 0.9]];
-  spots.forEach(([x, y, s], i) => (rocks += rock(x, y, s, i + 3)));
-  let roots = '';
-  for (let i = 0; i < 6; i++) {
-    const y = 338 - i * 20;
-    const w = 46 - i * 5;
-    roots += `<path d="M${400 - w} ${y} C${400 - w / 2} ${y - 9 - rand() * 4} ${400 + w / 3} ${y + 6} ${400 + w} ${y - 2}" fill="none" stroke="${INK}" stroke-width="${5.5 - i * 0.6}" stroke-linecap="round"/>
-      <path d="M${400 - w} ${y} C${400 - w / 2} ${y - 9 - rand() * 4} ${400 + w / 3} ${y + 6} ${400 + w} ${y - 2}" fill="none" stroke="${C.trunk}" stroke-width="${3 - i * 0.35}" stroke-linecap="round"/>`;
-  }
-  return frame(id, `
-    ${ground(230, 4)}
-    ${conifer(70, 258, 1.5, 1)}${conifer(140, 244, 1.1, 2)}${broadleaf(190, 236, 0.8)}
-    ${conifer(720, 258, 1.5, 3)}${conifer(640, 242, 1.1, 4)}${broadleaf(600, 236, 0.8)}
-    ${trailPoly(id, [[150, 360], [368, 224], [432, 224], [650, 360]], [[432, 224], [650, 360], [700, 360], [445, 224]])}
-    ${ink('M330 360 L388 226 M470 360 L412 226', 1, 'opacity=".45"')}
-    <path d="M560 360 C520 300 470 260 440 230 L452 230 C486 262 540 300 592 360Z" fill="${C.dirtDark}" opacity=".6"/>
-    ${hatch(id, 'M560 360 C520 300 470 260 440 230 L452 230 C486 262 540 300 592 360Z', 0.45)}
-    ${ink('M560 360 C520 300 470 260 440 230 M592 360 C540 300 486 262 452 230', 1.6)}
-    ${rocks}${roots}
-    ${fern(170, 352, 0.9)}${fern(660, 356, 0.8, true)}
-    ${pin(1, 262, 212)}${pin(2, 400, 212)}${pin(3, 518, 212)}
-  `, { label: 'Line choice: rock garden, roots or a rut' });
-}
-
-function corner(dir: 'left' | 'right'): string {
-  const id = dir;
-  const flip = dir === 'right' ? `transform="translate(${W} 0) scale(-1 1)"` : '';
-  const px = (x: number) => (dir === 'left' ? x : W - x);
-  const face = 'M520 360 C 520 262, 430 224, 190 216 L190 198 C 450 200, 560 250, 560 360Z';
-  return frame(id, `
-    ${ground(230, 5)}
-    <g ${flip}>
-      ${conifer(60, 262, 1.6, 5)}${conifer(120, 246, 1.2, 6)}${broadleaf(700, 240, 0.9)}${conifer(760, 258, 1.3, 7)}
-      ${rock(690, 330, 1.1, 9)}${fern(110, 356, 1)}
-      <path d="M520 360 C 520 262, 430 224, 190 216 L190 248 C 360 252, 420 292, 380 360Z" fill="${C.dirt}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M520 360 C 520 262, 430 224, 190 216 L190 248 C 360 252, 420 292, 380 360Z" fill="url(#dots-${id})" opacity=".22"/>
-      <path d="${face}" fill="${C.dirtDark}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      ${hatch(id, face, 0.4)}
-      ${ink('M470 360 C 470 290, 400 240, 190 232', 1, 'opacity=".5"')}
-      ${line('M400 352 C 420 292, 360 252, 200 240', 'fast')}
-      ${line('M488 352 C 500 282, 420 226, 200 220', 'safe')}
-    </g>
-    ${pin(1, px(300), 206)}${pin(2, px(420), 168)}
-  `, { label: `${dir === 'left' ? 'Left' : 'Right'} hand corner` });
-}
-
-function rollers(): string {
-  const id = 'roll';
-  const top = 'M0 300 L120 300 Q160 250 200 300 Q240 250 280 300 Q320 250 360 300 Q400 250 440 300 L800 300';
-  const rollShade = [160, 240, 320, 400].map((x) => `M${x} 275 Q${x + 24} 280 ${x + 40} 300 L${x} 300Z`).join('');
-  return frame(id, `
-    ${ground(230, 6)}
-    ${conifer(610, 246, 1.3, 8)}${conifer(690, 258, 1.6, 9)}${broadleaf(750, 240, 0.85)}${conifer(60, 250, 1.2, 10)}
-    <path d="${top} L800 360 L0 360Z" fill="${C.dirt}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-    <path d="${top} L800 360 L0 360Z" fill="url(#dots-${id})" opacity=".22"/>
-    <path d="${rollShade}" fill="${C.dirtDark}" opacity=".4"/>
-    ${hatch(id, rollShade, 0.35)}
-    ${ink('M0 322 L800 322', 1, 'opacity=".3"')}
-    ${line('M120 296 Q280 150 440 296', 'fast')}
-    ${line('M120 296 Q200 212 280 296 Q360 212 440 296', 'risky')}
-    ${line('M120 306 Q160 262 200 306 Q240 262 280 306 Q320 262 360 306 Q400 262 440 306', 'safe')}
-    ${rock(520, 340, 1, 11)}${fern(760, 352, 0.9, true)}
-    ${pin(1, 280, 184)}${pin(2, 200, 232)}${pin(3, 470, 278)}
-  `, { label: 'Roller section' });
-}
-
-function whoops(): string {
-  const id = 'whoop';
-  let top = 'M0 300 L80 300';
-  let shade = '';
-  for (let x = 80; x < 720; x += 40) {
-    top += ` Q${x + 20} 272 ${x + 40} 300`;
-    shade += ` M${x + 20} 286 Q${x + 32} 290 ${x + 40} 300 L${x + 20} 300Z`;
-  }
-  top += ' L800 300';
-  return frame(id, `
-    ${ground(230, 8)}
-    ${conifer(50, 252, 1.3, 12)}${broadleaf(140, 240, 0.8)}${conifer(740, 256, 1.5, 13)}${conifer(680, 242, 1, 14)}
-    <path d="${top} L800 360 L0 360Z" fill="${C.dirt}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-    <path d="${top} L800 360 L0 360Z" fill="url(#dots-${id})" opacity=".22"/>
-    <path d="${shade}" fill="${C.dirtDark}" opacity=".45"/>
-    ${rock(760, 344, 0.9, 15)}
-  `, { label: 'Moto whoop section' });
-}
-
-function switchbacks(): string {
-  const id = 'switch';
-  const path = 'M660 78 L190 128 Q130 138 170 158 L620 198 Q690 208 630 230 L170 282 Q110 292 160 312 L540 350';
-  const contours = [100, 150, 200, 250, 300].map((y) => `M0 ${y + 24} C 200 ${y - 10}, 500 ${y + 40}, 800 ${y - 20}`).join('');
-  return frame(id, `
-    <path d="M0 110 L800 52 L800 360 L0 360Z" fill="${C.grass}"/>
-    <path d="${contours}" fill="none" stroke="${C.grassDark}" stroke-width="1.2" opacity=".6"/>
-    ${conifer(90, 160, 0.9, 16)}${conifer(690, 118, 0.9, 17)}${conifer(740, 300, 1.3, 18)}${broadleaf(70, 330, 1)}${conifer(520, 204, 0.7, 19)}${conifer(420, 262, 0.75, 20)}
-    ${rock(330, 240, 0.9, 21)}${rock(560, 330, 1.1, 22)}
-    ${ribbon(id, path, 26)}
-    ${line('M300 118 L300 300', 'risky')}
-    ${line('M190 132 Q140 148 180 162', 'fast')}
-    ${line('M612 194 Q690 212 640 234', 'safe')}
-    ${pin(1, 300, 216)}${pin(2, 118, 124)}${pin(3, 700, 190)}
-  `, { label: 'Switchbacks on a steep hillside', sky: false, hills: false });
-}
-
-function gapJump(): string {
-  const id = 'gap';
-  const lip = 'M0 290 L170 290 Q250 288 300 225 L300 360 L0 360Z';
-  const landing = 'M520 240 Q580 250 650 300 L800 300 L800 360 L520 360Z';
-  const planks = Array.from({ length: 7 }, (_, i) => {
-    const t = i / 6;
-    const x = 170 + 130 * t;
-    const y = 290 - 65 * t * t;
-    return `M${r1(x)} ${r1(y + 2)} L${r1(x - 4)} ${r1(y + 16)}`;
-  }).join('');
-  return frame(id, `
-    ${ground(230, 9)}
-    ${conifer(40, 250, 1.4, 23)}${broadleaf(110, 236, 0.8)}${conifer(770, 252, 1.5, 24)}${conifer(700, 240, 1, 25)}
-    <path d="${lip}" fill="${C.dirt}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-    <path d="${lip}" fill="url(#dots-${id})" opacity=".22"/>
-    <path d="M170 290 Q250 288 300 225 L300 240 Q258 300 176 304Z" fill="#8A6A4C" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/>
-    ${ink(planks, 1)}
-    <path d="M300 225 L300 360 L520 360 L520 240 L500 268 Q400 306 322 268Z" fill="#4A5A4C"/>
-    ${hatch(id, 'M300 225 L300 360 L520 360 L520 240 L500 268 Q400 306 322 268Z', 0.3)}
-    ${ink('M300 225 L300 360 M520 240 L520 360 M322 268 Q400 306 500 268', 1.6)}
-    ${fern(330, 300, 1)}${fern(470, 320, 1.1, true)}${rock(420, 340, 1, 26)}
-    <path d="${landing}" fill="${C.dirt}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-    <path d="${landing}" fill="url(#dots-${id})" opacity=".22"/>
-    ${ribbon(id, 'M170 292 Q260 300 330 334 Q420 352 520 344 Q600 338 650 310', 16)}
-    ${line('M300 222 Q410 70 540 236', 'risky')}
-    ${line('M180 300 Q300 320 360 336 Q450 352 600 326', 'safe')}
-    ${pin(1, 420, 118)}${pin(2, 450, 310)}
-  `, { label: 'Gap jump with a chicken line' });
-}
-
-function motorway(): string {
-  const id = 'motor';
-  const bumps = Array.from({ length: 6 }, (_, i) => {
-    const y = 350 - i * 22;
-    const half = 120 - i * 16;
-    return `M${400 - half} ${y} Q400 ${y - 6} ${400 + half} ${y}`;
-  }).join('');
-  return frame(id, `
-    ${ground(230, 10)}
-    ${conifer(70, 262, 1.7, 27)}${conifer(160, 244, 1.2, 28)}${broadleaf(240, 232, 0.7)}${conifer(560, 232, 0.7, 29)}${conifer(640, 244, 1.2, 30)}${conifer(730, 262, 1.7, 31)}
-    ${trailPoly(id, [[120, 360], [378, 222], [422, 222], [680, 360]], [[422, 222], [680, 360], [720, 360], [432, 222]])}
-    ${trailPoly(id, [[60, 360], [120, 360], [378, 222], [372, 222]], [[60, 360], [120, 360], [378, 222], [372, 222]])}
-    ${ink(bumps, 1.2, 'opacity=".55"')}
-    ${rock(140, 340, 0.8, 32)}${fern(690, 352, 1, true)}
-  `, { label: 'Motorway straight' });
-}
 
 // ---------------------------------------------------------------- start gates
 
@@ -556,21 +380,6 @@ function startGate(level: number): string {
     <text x="400" y="${level >= 3 ? 160 : 160}" text-anchor="middle" font-size="24" font-weight="900" letter-spacing="4" font-family="system-ui, sans-serif" fill="#FBFAF6">${banner}</text>
     ${flags}
   `, { label: `${banner.toLowerCase()} gate` });
-}
-
-/** Scene for a trail section by its index in races/terrain.txt, or null for sections without art. */
-export function sectionScene(index: number): string | null {
-  switch (index) {
-    case 0: return lineChoice();
-    case 1: return corner('left');
-    case 2: return corner('right');
-    case 3: return rollers();
-    case 4: return whoops();
-    case 5: return switchbacks();
-    case 6: return gapJump();
-    case 7: return motorway();
-    default: return null;
-  }
 }
 
 export function startScene(endcap: number): string {

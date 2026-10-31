@@ -31,12 +31,27 @@ edits.
 | `src/engine/` | The rules, ported from the C++ (`game.ts`), with parsers, types and RNG. No DOM |
 | `src/ui/app.ts` | Screens, input (keyboard, mouse/tap, on-screen D-pad), modals and game flow |
 | `src/ui/mapSvg.ts` | Draws a zone map from its ASCII file, with smoothed coastlines |
-| `src/ui/art.ts` | SVG art: the rider, start gates and one scene for each trail section |
+| `src/ui/pov.ts` | First-person trail scenes: the view over the bars, forking into one lane per line choice |
+| `src/ui/art.ts` | SVG art: start gates, the frame drawing, title stickers and shared drawing helpers |
 | `src/ui/save.ts` | Saves in `localStorage`: an autosave (Continue) plus named saves like the original |
 | `tests/bot.ts` | A simple bot that plays full seasons. It's used to check the game can be finished |
 
-A trail section with no SVG scene (for example one newly added to `races/terrain.txt`) falls back to its ASCII
-art.
+## Playing
+
+- **Map:** arrow keys or WASD move one step (or tap a cell to ride there). <kbd>Enter</kbd> enters a shop or
+  race, <kbd>1</kbd> local race, <kbd>2</kbd> eat, <kbd>3</kbd> toolkit, <kbd>4</kbd> save, <kbd>5</kbd> fuel,
+  <kbd>Esc</kbd> menu.
+- **Races:** each section is drawn from the rider's point of view, with the trail forking into a left,
+  straight and right lane. Every lane is one line choice with the feature it rides drawn on it (rocks, roots,
+  a rut, the inside of a corner or the berm, rollers, gaps, switchbacks...). Pick one with <kbd>←</kbd>
+  <kbd>↑</kbd> <kbd>→</kbd> (or A/W/D, the number keys, or a tap on the trail or its tile). Which lane an option
+  takes is set in `lanesFor()` in `src/ui/pov.ts`; a section added to `races/terrain.txt` gets a scene
+  automatically, with lane features picked from each option's name or the stat it uses.
+- **Fuel:** the van holds 30 gallons and every step burns one. Fill up at shops, race venues and finals
+  (USA $4/gal, Europe $7/gal). Run dry on the open trail and you can call a fuel delivery (5 gallons at triple
+  price) or enter a local race from where you're standing to earn fuel money.
+- **Layout:** on desktop the game always fits one screen with no scrolling. On phones the map zooms in and
+  follows the rider (tap **Full map** to see everything), with the D-pad over the map.
 
 ## Product photos
 
@@ -87,6 +102,8 @@ The formulas follow the C++ code. These changes fix crashes, keep the game finis
   be reached.
 - **Club races.** Once every named race at your level is won, local "club" races stand in, so you can't get
   stuck without races to enter.
+- **Fuel.** The map has a fuel tank, so you can't wander freely: plan stops at shops and races. Running dry
+  with no money and no sponsors to pay for a delivery ends the season.
 - Racing with no tires no longer crashes the game, and a flat tire gets thrown away.
 
 ## Deploying to game.shreddi.bike (Cloudflare)
