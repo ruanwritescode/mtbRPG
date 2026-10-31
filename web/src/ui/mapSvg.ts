@@ -53,7 +53,17 @@ function flag(p: Point, color: string, label: string): string {
   </g>`;
 }
 
-export function mapSvg(t: Terrain, map: MapState, opts: { nextLevel: number; finalOpen: boolean; path?: Point[]; from?: Point }): string {
+/** A zoomed window that follows the rider: width and height in map units, centred on the rider. */
+export interface Camera {
+  w: number;
+  h: number;
+}
+
+export function mapSvg(
+  t: Terrain,
+  map: MapState,
+  opts: { nextLevel: number; finalOpen: boolean; path?: Point[]; from?: Point; camera?: Camera },
+): string {
   const vw = t.width;
   const vh = t.height * 2;
   const visited = map.visited
@@ -84,11 +94,25 @@ export function mapSvg(t: Terrain, map: MapState, opts: { nextLevel: number; fin
     : '';
   const [px, py] = center(map.player);
   const [ox, oy] = opts.from ? center(opts.from) : [px, py];
-  return `<svg class="map-svg" viewBox="-1 -1 ${vw + 2} ${vh + 2}" data-w="${vw}" data-h="${vh}" role="img" aria-label="Map">
+  // With a camera the view is a window centred on the rider (clamped to the map), panning smoothly from
+  // where it was last step; without one the whole map shows.
+  const cam = opts.camera;
+  const origin = (c: [number, number]) => {
+    if (!cam) return [-1, -1];
+    const clamp = (v: number, size: number, total: number) => (size >= total + 2 ? (total - size) / 2 : Math.max(-1, Math.min(total + 1 - size, v - size / 2)));
+    return [clamp(c[0], cam.w, vw), clamp(c[1], cam.h, vh)];
+  };
+  const [x0, y0] = origin(center(map.player));
+  const [fx0, fy0] = opts.from ? origin(center(opts.from)) : [x0, y0];
+  const viewBox = cam ? `0 0 ${cam.w} ${cam.h}` : `-1 -1 ${vw + 2} ${vh + 2}`;
+  const camOpen = cam ? `<g class="cam" style="transform:translate(${-x0}px,${-y0}px);--cfx:${-fx0}px;--cfy:${-fy0}px">` : '<g>';
+  return `<svg class="map-svg ${cam ? 'zoomed' : ''}" viewBox="${viewBox}" data-x0="${cam ? x0 : 0}" data-y0="${cam ? y0 : 0}" data-w="${vw}" data-h="${vh}" role="img" aria-label="Map">
     <defs>
       <filter id="smooth" x="-2%" y="-2%" width="104%" height="104%"><feGaussianBlur stdDeviation="0.55"/><feComponentTransfer><feFuncA type="discrete" tableValues="0 1"/></feComponentTransfer></filter>
       <filter id="coast" x="-3%" y="-3%" width="106%" height="106%"><feGaussianBlur stdDeviation="0.75"/><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 1 1 1 1 1 1"/></feComponentTransfer></filter>
     </defs>
+    ${cam ? `<rect width="${cam.w}" height="${cam.h}" fill="var(--water)"/>` : ''}
+    ${camOpen}
     <rect x="-1" y="-1" width="${vw + 2}" height="${vh + 2}" fill="var(--water)" rx="1"/>
     ${landLayer(t)}
     <path d="${visited}" stroke="var(--trail)" stroke-width="0.6" stroke-linecap="round"/>
@@ -99,6 +123,7 @@ export function mapSvg(t: Terrain, map: MapState, opts: { nextLevel: number; fin
       <circle cx="-0.38" cy="0.15" r="0.27" fill="none" stroke="#fff" stroke-width="0.12"/><circle cx="0.38" cy="0.15" r="0.27" fill="none" stroke="#fff" stroke-width="0.12"/>
       <path d="M-0.38 0.15L-0.1 -0.25L0.25 -0.25L0.38 0.15M-0.1 -0.25L0 0.15" fill="none" stroke="#fff" stroke-width="0.1" stroke-linejoin="round"/>
     </g></g>
+    </g>
   </svg>`;
 }
 
@@ -106,7 +131,8 @@ export function mapSvg(t: Terrain, map: MapState, opts: { nextLevel: number; fin
 export function cellFromEvent(svg: SVGSVGElement, ev: MouseEvent, parity: number): Point | null {
   const ctm = svg.getScreenCTM();
   if (!ctm) return null;
-  const pt = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(ctm.inverse());
+  const raw = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(ctm.inverse());
+  const pt = { x: raw.x + Number(svg.dataset.x0 ?? 0), y: raw.y + Number(svg.dataset.y0 ?? 0) };
   const y = Math.floor(pt.y / 2);
   const x = parity + 2 * Math.round((pt.x - 0.5 - parity) / 2);
   return { x, y };

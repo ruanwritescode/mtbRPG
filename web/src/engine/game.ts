@@ -32,6 +32,11 @@ export const UNIT_PRICES = { tires: 95, snacks: 3, toolkits: 400 } as const;
 export type Consumable = keyof typeof UNIT_PRICES;
 export const QUIT_PENALTY = 20;
 export const START_SPONSORS = 3;
+/** The van: tank size in gallons (one per map step), price per gallon by zone, and the delivery fallback. */
+export const FUEL_TANK = 30;
+export const FUEL_PRICE: Record<Zone, number> = { usa: 4, europe: 7 };
+export const DELIVERY_GALLONS = 5;
+export const DELIVERY_MARKUP = 3;
 export const MAX_INJURIES = 3;
 export const FINAL_BONUS = 1000;
 /**
@@ -121,6 +126,7 @@ export function createGame(name: string, data: GameData, rng: Rng): GameState {
     level: 0,
     money: START_MONEY,
     sponsors: START_SPONSORS,
+    fuel: FUEL_TANK,
     maps: {
       usa: newMap('usa', data.maps.usa, rng),
       europe: newMap('europe', data.maps.europe, rng),
@@ -204,12 +210,19 @@ export function canStand(data: GameData, zone: Zone, x: number, y: number) {
 }
 
 /** Moves the rider; 1 in 10 steps onto a new cell turns out to be a town with a bike shop. */
-export function move(state: GameState, data: GameData, dir: Direction, rng: Rng): { moved: boolean; shopFound: boolean } {
+export function move(
+  state: GameState,
+  data: GameData,
+  dir: Direction,
+  rng: Rng,
+): { moved: boolean; shopFound: boolean; noFuel?: boolean } {
   const map = currentMap(state);
   const t = data.maps[map.zone];
   const nx = map.player.x + DIRS[dir].x;
   const ny = map.player.y + DIRS[dir].y;
   if (!isLand(t, nx, ny)) return { moved: false, shopFound: false };
+  if (state.fuel < 1) return { moved: false, shopFound: false, noFuel: true };
+  state.fuel -= 1;
   map.player = { x: nx, y: ny };
   let shopFound = false;
   if (rng.int(10) === 3 && map.shops.length < map.maxShops && isFreeSpace(map, t, nx, ny)) {
@@ -232,6 +245,43 @@ export function locationOf(state: GameState): Location {
   if (has(map.races, x, y)) return 'race';
   if (map.final.x === x && map.final.y === y) return 'final';
   return 'open';
+}
+
+// ---------------------------------------------------------------- fuel
+
+/** Towns with a bike shop and race venues sell fuel. */
+export function atFuelStation(state: GameState): boolean {
+  return locationOf(state) !== 'open';
+}
+
+export function fuelPrice(state: GameState, delivery = false): number {
+  return FUEL_PRICE[zoneOf(state)] * (delivery ? DELIVERY_MARKUP : 1);
+}
+
+/** Gallons a fill-up would add at a station (up to a full tank). */
+export function fillUpGallons(state: GameState): number {
+  return Math.max(0, FUEL_TANK - Math.floor(state.fuel));
+}
+
+/**
+ * Buy fuel: at a station fill to `gallons` (default a full tank), or call a delivery anywhere for
+ * DELIVERY_GALLONS at a markup. Buys as much as the rider can afford. Returns what was bought, or null.
+ */
+export function refuel(state: GameState, delivery = false, gallons?: number): { gallons: number; cost: number } | null {
+  if (!delivery && !atFuelStation(state)) return null;
+  const want = Math.min(delivery ? DELIVERY_GALLONS : gallons ?? fillUpGallons(state), fillUpGallons(state));
+  const price = fuelPrice(state, delivery);
+  const affordable = Math.max(0, Math.floor(state.money / price));
+  const g = Math.min(want, affordable);
+  if (g <= 0) return null;
+  state.fuel += g;
+  state.money -= g * price;
+  return { gallons: g, cost: g * price };
+}
+
+/** Out of fuel with no race to enter where they stand: the rider can't earn their way out. */
+export function stranded(state: GameState): boolean {
+  return state.fuel < 1 && state.level === 0 && locationOf(state) !== 'race';
 }
 
 export function requiredPoints(level: number): number {
@@ -664,8 +714,10 @@ export function checkout(state: GameState, data: GameData, cart: Cart): boolean 
 export function sponsorShortfall(state: GameState, data: GameData): number {
   const p = state.player;
   const worn = bikeHealth(p) < 30 && p.toolkits === 0;
-  if (!raceBlocker(p) && !worn) return 0;
+  const dry = state.fuel < 1;
+  if (!raceBlocker(p) && !worn && !dry) return 0;
   let need = worn ? priceAt(UNIT_PRICES.toolkits, state.level) : 0;
+  if (dry) need += DELIVERY_GALLONS * fuelPrice(state, true);
   for (const slot of PART_SLOTS) {
     if (p.parts[slot] && p.parts[slot]!.quality > 0) continue;
     need += Math.min(...data.shop.parts[slot].map((it) => priceAt(it.price, state.level)));
@@ -693,7 +745,7 @@ export function sponsorBailout(state: GameState, data: GameData): number {
 export function checkGameOver(state: GameState, data?: GameData): boolean {
   if (state.phase === 'champion' || state.phase === 'gameover') return state.phase === 'gameover';
   if (state.player.injuries >= MAX_INJURIES) state.gameOver = 'injury';
-  else if (data && raceBlocker(state.player) && sponsorShortfall(state, data) > 0 && state.sponsors <= 0) {
+  else if (data && (raceBlocker(state.player) || stranded(state)) && sponsorShortfall(state, data) > 0 && state.sponsors <= 0) {
     state.gameOver = 'broke';
   }
   if (state.gameOver) {

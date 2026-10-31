@@ -190,6 +190,42 @@ describe('game rules', () => {
   });
 });
 
+describe('fuel', () => {
+  it('uses a gallon per step and stops the van when the tank is dry', () => {
+    const s = G.createGame('A', data, seededRng(11));
+    expect(s.fuel).toBe(G.FUEL_TANK);
+    const before = s.fuel;
+    const r = G.move(s, data, 'right', seededRng(1));
+    if (r.moved) expect(s.fuel).toBe(before - 1);
+    s.fuel = 0;
+    const pos = { ...s.maps.usa.player };
+    expect(G.move(s, data, 'left', seededRng(2))).toMatchObject({ moved: false, noFuel: true });
+    expect(s.maps.usa.player).toEqual(pos);
+  });
+
+  it('fills up only at stations, and delivers anywhere at a markup', () => {
+    const s = G.createGame('A', data, seededRng(12));
+    s.fuel = 10;
+    expect(G.atFuelStation(s)).toBe(false);
+    expect(G.refuel(s)).toBeNull();
+    const money = s.money;
+    expect(G.refuel(s, true)).toEqual({ gallons: G.DELIVERY_GALLONS, cost: G.DELIVERY_GALLONS * G.FUEL_PRICE.usa * G.DELIVERY_MARKUP });
+    expect(s.money).toBe(money - G.DELIVERY_GALLONS * G.FUEL_PRICE.usa * G.DELIVERY_MARKUP);
+    s.maps.usa.shops.push({ ...s.maps.usa.player });
+    expect(G.refuel(s)).toEqual({ gallons: G.FUEL_TANK - 15, cost: (G.FUEL_TANK - 15) * G.FUEL_PRICE.usa });
+    expect(s.fuel).toBe(G.FUEL_TANK);
+  });
+
+  it('is game over when stranded with no fuel, no money and no sponsors', () => {
+    const s = G.createGame('A', data, seededRng(13));
+    s.fuel = 0;
+    s.money = 0;
+    s.sponsors = 0;
+    expect(G.checkGameOver(s, data)).toBe(true);
+    expect(s.gameOver).toBe('broke');
+  });
+});
+
 describe('sponsors, injuries and game over', () => {
   it('rates lines beyond your ability as risky', () => {
     const r = G.newRacer('x', seededRng(1));

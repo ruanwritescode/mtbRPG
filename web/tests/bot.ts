@@ -149,6 +149,30 @@ export function playSeason(rng: Rng, maxSteps = 20000): BotRun {
 
   while (steps++ < maxSteps && state.phase !== 'champion') {
     if (G.checkGameOver(state, data)) return { state, steps, races, done: false, stuck: `game over: ${state.gameOver}` };
+    // Fuel: top up at any station, head for one when low, and when dry call a delivery or race for cash.
+    if (G.atFuelStation(state) && state.fuel < G.FUEL_TANK - 2) G.refuel(state);
+    if (state.fuel < 1) {
+      if (G.refuel(state, true)) continue;
+      if (state.level >= 1 && !G.raceBlocker(state.player)) {
+        race('local');
+        continue;
+      }
+      if (G.sponsorBailout(state, data) > 0) {
+        bailouts++;
+        continue;
+      }
+      return { state, steps, races, done: false, stuck: 'out of fuel' };
+    }
+    if (state.fuel < 8 && !G.atFuelStation(state)) {
+      const m = G.currentMap(state);
+      const isStation = (pt: Point) =>
+        m.shops.some((q) => q.x === pt.x && q.y === pt.y) || m.races.some((q) => q.x === pt.x && q.y === pt.y) || (m.final.x === pt.x && m.final.y === pt.y);
+      const dir = bfs(state, isStation);
+      if (dir) {
+        G.move(state, data, dir, rng);
+        continue;
+      }
+    }
     if (broke) return { state, steps, races, done: false, stuck: 'cannot afford entry fees' };
     const p = state.player;
     // Maintenance

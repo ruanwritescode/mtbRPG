@@ -128,6 +128,8 @@ export interface GameState {
   money: number;
   /** Sponsors still backing you; each bail-out costs one. */
   sponsors: number;
+  /** Gallons in the van's tank; each step on the map uses one. */
+  fuel: number;
   gameOver?: GameOverReason;
   maps: Record<Zone, MapState>;
   races: RaceDef[];

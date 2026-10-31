@@ -62,6 +62,9 @@ export class App {
   /** Whether the stat meters are expanded; collapsed by default on phones so the map stays in view. */
   private metersOpen = !window.matchMedia?.('(max-width: 820px)').matches;
   private shopCat: ItemKind | 'supplies' = 'frame';
+  /** Phone layout: the map is a zoomed camera on the rider unless the full map is toggled on. */
+  private mobile = !!window.matchMedia?.('(max-width: 820px)').matches;
+  private fullMap = false;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -76,6 +79,13 @@ export class App {
       true,
     );
     window.addEventListener('keydown', (e) => this.onKey(e));
+    window.addEventListener('resize', () => {
+      const m = !!window.matchMedia?.('(max-width: 820px)').matches;
+      if (m !== this.mobile) {
+        this.mobile = m;
+        this.render();
+      }
+    });
     this.render();
   }
 
@@ -200,8 +210,8 @@ export class App {
         } else if (k === 'Enter' || k === ' ' || k === 'e' || k === 'E') {
           e.preventDefault();
           this.act('interact', {});
-        } else if (keyNum >= 1 && keyNum <= 4) {
-          this.act(['local', 'eat', 'repair', 'save'][keyNum - 1], {});
+        } else if (keyNum >= 1 && keyNum <= 5) {
+          this.act(['local', 'eat', 'repair', 'save', 'fuel'][keyNum - 1], {});
         } else if (k === 'Escape') this.act('menu', {});
         break;
       }
@@ -280,6 +290,9 @@ export class App {
       case 'local':
         this.askRace('local');
         return;
+      case 'fuel':
+        this.buyFuel();
+        return;
       case 'eat':
         this.eat();
         return;
@@ -288,6 +301,10 @@ export class App {
         return;
       case 'save':
         this.save();
+        return;
+      case 'fullmap':
+        this.fullMap = !this.fullMap;
+        this.render();
         return;
       case 'dpad':
         this.stopWalk();
@@ -374,6 +391,7 @@ export class App {
   }
 
   private resume(s: GameState) {
+    if (typeof s.fuel !== 'number') s.fuel = G.FUEL_TANK; // saves from before fuel existed
     this.game = s;
     this.log = [];
     this.cart = G.emptyCart();
@@ -393,7 +411,13 @@ export class App {
     const map = G.currentMap(this.g);
     const before = { ...map.player };
     const r = G.move(this.g, data, dir, rng);
+    if (r.noFuel) {
+      this.say(this.g.level ? 'Out of fuel. Race locally for cash (1) or call a fuel delivery (5).' : 'Out of fuel. Call a fuel delivery (5) to keep going.', 'bad');
+      this.render();
+      return false;
+    }
     if (!r.moved) return false;
+    if (this.g.fuel === 5) this.say('Fuel is running low. Fill up at a town or a race venue.', 'bad');
     this.from = before;
     if (r.shopFound) this.say('There’s a bike shop in this town!', 'good');
     this.commit();
@@ -455,7 +479,6 @@ export class App {
   private askRace(kind: RaceKind) {
     const g = this.g;
     const map = G.currentMap(g);
-    if (kind === 'local' && G.locationOf(g) !== 'open') return this.interact();
     if (kind === 'map' && g.player.points < G.requiredPoints(g.level)) {
       this.say(`Earn ${G.requiredPoints(g.level)} qualification points to enter this race.`, 'bad');
       return this.render();
@@ -535,6 +558,19 @@ export class App {
     else if (res.champion) this.screen = 'victory';
     else if (res.zoneComplete) this.screen = 'europe';
     else this.screen = 'map';
+    this.commit();
+  }
+
+  private buyFuel() {
+    const g = this.g;
+    const station = G.atFuelStation(g);
+    if (G.fillUpGallons(g) === 0) {
+      this.say('The tank is already full.');
+      return this.render();
+    }
+    const r = G.refuel(g, !station);
+    if (!r) this.say(`You can’t afford fuel ($${G.fuelPrice(g, !station)}/gal). Race locally to earn some.`, 'bad');
+    else this.say(station ? `Filled up: ${r.gallons} gal for ${money(r.cost)}.` : `Fuel delivered: ${r.gallons} gal for ${money(r.cost)}.`, 'good');
     this.commit();
   }
 
@@ -661,7 +697,8 @@ export class App {
         <li>Bike shops pop up as you explore new towns. Press <kbd>Enter</kbd> on one to go in.</li>
         <li>Flags are qualifying races. Each one needs more points than the last; winning (or a podium) levels you up.</li>
         <li>Win every flag to unlock the region’s final race (the checkered flag).</li>
-        <li>Anywhere else, <kbd>1</kbd> enters a local race for points and prize money.</li></ul>
+        <li><kbd>1</kbd> enters a local race anywhere, for points and prize money.</li>
+        <li>Your van uses a gallon of fuel per step. Fill up (<kbd>5</kbd>) at towns with a bike shop or at race venues. Run dry and you can call a delivery at three times the price, or race locally to pay for it.</li></ul>
         <h4>Racing</h4>
         <ul><li>Each section offers lines that use Strength, Skill or Endurance — or a safe line that just loses time.</li>
         <li>A stat above the race’s pace gains time, below it loses time. Using a stat tires it out.</li>
@@ -811,6 +848,7 @@ export class App {
         <button class="logo small" data-act="menu" aria-label="Menu">mtb<span>RPG</span></button>
         <span class="chip zone">${zone === 'usa' ? '🇺🇸' : '🇪🇺'} ${ZONE_LABELS[zone]}</span>
         <span class="spacer"></span>
+        <span class="chip stat-chip-top fuel-chip ${g.fuel <= 5 ? 'low' : ''}" title="Fuel">⛽ ${g.fuel}/${G.FUEL_TANK}</span>
         <span class="chip stat-chip-top">⭐ ${g.player.points}</span>
         <span class="chip stat-chip-top ${g.money < 0 ? 'neg' : ''}">💵 ${money(g.money)}</span>
         <button class="btn ghost small" data-act="menu" aria-label="Open menu">☰ Menu</button>
@@ -877,6 +915,7 @@ export class App {
       <div class="hud-bar">
         <div class="hud-id"><div class="avatar" aria-hidden="true">${esc(p.name.slice(0, 1).toUpperCase())}</div>
           <div><div class="rider-name">${esc(p.name)}</div><div class="rider-sub">${g.level ? levelBadge(g.level) : '<span class="badge">Rookie</span>'}${gate ? `<span class="muted"> · ${gate}</span>` : ''}</div></div></div>
+        <div class="hud-kpi fuel"><span>Fuel</span>${this.bar(g.fuel, G.FUEL_TANK, g.fuel <= 5 ? 'bad' : g.fuel <= 12 ? 'warn' : 'good')}<small>${g.fuel}/${G.FUEL_TANK} gal · ${money(G.fuelPrice(g))}/gal</small></div>
         <div class="hud-kpi"><span>Sponsors</span>${pips(g.sponsors, G.START_SPONSORS, 'sponsor')}<small>${g.sponsors} left</small></div>
         <div class="hud-kpi"><span>Injuries</span>${pips(p.injuries, G.MAX_INJURIES, 'injury')}<small>${G.MAX_INJURIES - p.injuries} to go</small></div>
         <div class="hud-ride" title="How your bike rides: the average of its four parts">${this.attrRows(G.bikeAttrs(p), 'compact')}</div>
@@ -906,7 +945,7 @@ export class App {
     const finalRace = data.raceList.find((r) => r.level === G.FINAL_LEVEL[zone]);
     let here: string;
     if (loc === 'shop') {
-      here = `<h3>🔧 Bike shop</h3><p>There’s a bike shop in this town. Parts, tires, snacks and toolkits.</p>
+      here = `<h3>🔧 Bike shop</h3><p>Parts, tires, snacks and toolkits, plus a fuel station.</p>
         <button class="btn primary" data-act="interact">Visit shop <kbd>Enter</kbd></button>`;
     } else if (loc === 'race') {
       const ok = g.player.points >= req;
@@ -924,7 +963,14 @@ export class App {
     }
     const blocker = G.raceBlocker(g.player);
     const p = g.player;
+    const station = G.atFuelStation(g);
+    const need = G.fillUpGallons(g);
+    const fuelBtn = station
+      ? `<button class="btn plain" data-act="fuel" ${need ? '' : 'disabled'} title="Fuel station: ${money(G.fuelPrice(g))} a gallon"><kbd>5</kbd> Fill up <small>${need ? `${need} gal · ${money(need * G.fuelPrice(g))}` : 'full'}</small></button>`
+      : `<button class="btn plain" data-act="fuel" ${need ? '' : 'disabled'} title="Delivered anywhere at ${G.DELIVERY_MARKUP}× the price"><kbd>5</kbd> Fuel delivery <small>${G.DELIVERY_GALLONS} gal · ${money(Math.min(G.DELIVERY_GALLONS, need) * G.fuelPrice(g, true))}</small></button>`;
     const actions = `<div class="actions">
+      ${g.level ? `<button class="btn plain" data-act="local" ${blocker ? 'disabled' : ''} title="A race you can enter anywhere, for points and prize money"><kbd>1</kbd> Local race</button>` : ''}
+      ${fuelBtn}
       <button class="btn plain" data-act="eat" ${p.snacks ? '' : 'disabled'} title="Restores all four stats"><kbd>2</kbd> Eat a snack <small>${p.snacks} left</small></button>
       <button class="btn plain" data-act="repair" ${p.toolkits ? '' : 'disabled'} title="Repairs every working part"><kbd>3</kbd> Use a toolkit <small>${p.toolkits} left</small></button>
       <button class="btn plain" data-act="save"><kbd>4</kbd> Save game</button>
@@ -932,19 +978,21 @@ export class App {
     const log = this.log.map((m) => `<li class="${m.tone}">${esc(m.text)}</li>`).join('');
     return `<div class="map-stage">
       <div class="map-wrap">
-        ${mapSvg(t, map, { nextLevel: g.level + 1, finalOpen: map.races.length === 0, path: this.walkPath, from: this.from ?? undefined })}
-        <div class="legend"><span><i class="lg you"></i>You</span><span>${signIcon(g.level + 1, 12)}Qualifier</span><span><i class="lg shop"></i>Shop</span><span>🏁 Final</span><span><i class="lg won"></i>Won</span><span><i class="lg trail"></i>Ridden</span></div>
-      </div>
-      <div class="panel">
-        <div class="here card">${here}</div>
-        ${blocker ? `<div class="notice bad">${esc(blocker)}</div>` : ''}
-        ${actions}
+        ${mapSvg(t, map, { nextLevel: g.level + 1, finalOpen: map.races.length === 0, path: this.walkPath, from: this.from ?? undefined, camera: this.mobile && !this.fullMap ? { w: 30, h: 30 } : undefined })}
+        <button class="btn plain small map-toggle" data-act="fullmap">${this.fullMap ? 'Follow rider' : 'Full map'}</button>
         <div class="dpad" aria-label="Move">
           <button class="btn plain" data-act="dpad" data-dir="up" data-key="up" aria-label="Up">▲</button>
           <button class="btn plain" data-act="dpad" data-dir="left" data-key="left" aria-label="Left">◀</button>
           <button class="btn plain" data-act="dpad" data-dir="down" data-key="down" aria-label="Down">▼</button>
           <button class="btn plain" data-act="dpad" data-dir="right" data-key="right" aria-label="Right">▶</button>
         </div>
+        <div class="legend"><span><i class="lg you"></i>You</span><span>${signIcon(g.level + 1, 12)}Qualifier</span><span><i class="lg shop"></i>Shop · fuel</span><span>🏁 Final</span><span><i class="lg won"></i>Won</span><span><i class="lg trail"></i>Ridden</span></div>
+      </div>
+      <div class="panel">
+        <div class="here card">${here}</div>
+        ${blocker ? `<div class="notice bad">${esc(blocker)}</div>` : ''}
+        ${g.fuel < 1 ? `<div class="notice bad">Out of fuel. ${g.level ? 'Race locally to earn cash, or ' : ''}call a fuel delivery to keep moving.</div>` : g.fuel <= 5 ? `<div class="notice warn">Low fuel: ${g.fuel} gal left. Towns with a shop and race venues sell fuel.</div>` : ''}
+        ${actions}
         <ul class="log" aria-live="polite">${log}</ul>
         <p class="hint muted small"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to move · tap the map to ride there · <kbd>Esc</kbd> menu · <button class="linkish" data-act="help">How to play</button></p>
       </div>
