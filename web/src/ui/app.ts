@@ -16,7 +16,7 @@ import {
   type RaceSession,
   type StatName,
 } from '../engine/types';
-import { levelBadge, sectionScene, signIcon, startScene, titleArt } from './art';
+import { levelBadge, sectionScene, signIcon, startScene, titleBackground } from './art';
 import { esc, money, ordinal, seconds } from './dom';
 import { cellFromEvent, mapSvg } from './mapSvg';
 import * as Save from './save';
@@ -693,22 +693,23 @@ export class App {
   private titleView(): string {
     const auto = Save.loadAutosave();
     const saves = Save.listSaves();
-    const cont = auto && auto.phase !== 'gameover' && auto.phase !== 'champion'
-      ? `<button class="btn primary big" data-act="continue">Continue <span class="sub">${esc(auto.player.name)} · Level ${auto.level} · ${ZONE_LABELS[auto.phase === 'usa' ? 'usa' : 'europe']}</span></button>`
+    const canContinue = auto && auto.phase !== 'gameover' && auto.phase !== 'champion';
+    const cont = canContinue
+      ? `<button class="btn primary duo" data-act="continue">Continue<span class="sub">${esc(auto.player.name)} · Level ${auto.level} · ${ZONE_LABELS[auto.phase === 'usa' ? 'usa' : 'europe']}</span></button>`
       : '';
     return `<main class="title-screen">
-      <div class="title-art">${titleArt()}</div>
-      <div class="title-card">
+      <div class="title-bg">${titleBackground()}</div>
+      <div class="title-content">
         <h1 class="logo">mtb<span>RPG</span></h1>
-        <p class="tagline">A mountain bike role-playing game. Build a bike, chase points, and race your way to the World Championship.</p>
+        <p class="tagline">Build a bike. Chase points. Race your way to the World Championship.</p>
         <div class="menu">
           ${cont}
-          <button class="btn ${cont ? 'plain' : 'primary'} big" data-act="new">New game</button>
-          ${saves.length ? `<button class="btn plain big" data-act="load">Load game <span class="sub">${saves.length} save${saves.length > 1 ? 's' : ''}</span></button>` : ''}
-          <button class="btn ghost" data-act="help">How to play</button>
+          <button class="btn ${cont ? 'plain' : 'primary'} duo" data-act="new">${cont ? 'New season' : 'Start a new season'}</button>
+          ${saves.length ? `<button class="btn plain duo" data-act="load">Load game<span class="sub">${saves.length} save${saves.length > 1 ? 's' : ''}</span></button>` : ''}
+          <button class="btn ghost duo" data-act="help">How to play</button>
         </div>
       </div>
-      <footer class="credits">Originally a C++ terminal game by Ruan Abarbanel (CSCI 1300, 2022) · Part of <a href="https://shreddi.bike">shreddi</a></footer>
+      <footer class="credits">Based on the C++ terminal game by Ruan Abarbanel (2022) · Part of <a href="https://shreddi.bike">shreddi</a></footer>
     </main>`;
   }
 

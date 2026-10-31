@@ -13,9 +13,15 @@ npm run dev        # http://localhost:5173
 ```
 
 ```bash
+npm run dev:sync   # the same, plus it pulls new commits from origin every few seconds
 npm test           # engine tests, including a bot that plays whole seasons
 npm run build      # typecheck + production build into web/dist
 ```
+
+`npm run dev` hot-reloads the page whenever a file changes, so edits appear without a rebuild.
+`npm run dev:sync` adds a fast-forward pull of the current branch (every 8 s, or `SYNC_INTERVAL=3`), which
+makes commits pushed from a cloud session show up in the browser on their own. It never pulls over local
+edits.
 
 ## How it's put together
 

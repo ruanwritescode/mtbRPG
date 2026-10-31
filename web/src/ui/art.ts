@@ -557,17 +557,125 @@ export function startScene(endcap: number): string {
   return startGate(endcap);
 }
 
-export function titleArt(): string {
-  const id = 'title';
-  const trail = 'M820 150 C 700 160, 640 200, 560 210 S 420 230, 380 262 S 300 310, 200 330';
-  return frame(id, `
-    <path d="M0 262 L120 182 L210 226 L360 118 L500 216 L620 160 L800 236 L800 360 L0 360Z" fill="#6C8D72"/>
-    <path d="M360 118 L400 148 L380 152 L360 138 L342 154 L324 148Z" fill="${C.snow}" stroke="${INK}" stroke-width="1" stroke-linejoin="round"/>
-    <path d="M0 262 L120 182 L210 226 L360 118 L500 216 L620 160 L800 236" fill="none" stroke="${INK}" stroke-width="1.4" opacity=".55"/>
-    <path d="M0 300 C 150 282, 240 320, 400 300 S 650 272, 800 296 L800 360 L0 360Z" fill="${C.grass}"/>
-    ${conifer(60, 300, 1.1, 50)}${conifer(120, 286, 0.8, 51)}${conifer(700, 290, 1, 52)}${conifer(760, 304, 1.3, 53)}${broadleaf(640, 290, 0.8)}
-    ${ribbon(id, trail, 22)}
-    ${rock(300, 334, 1, 54)}${rock(520, 326, 0.8, 55)}${fern(250, 350, 1)}${fern(600, 350, 1, true)}
-    ${rider(418, 300, 1.2, -10, '#F2791C')}
-  `, { label: 'A rider on a mountain trail', align: 'xMidYMax' });
+// ---------------------------------------------------------------- title stickers
+
+/** Objects from the game drawn as stickers (ink line icons with a white cut-out edge). Each is ~100 units. */
+export const stickers = {
+  tire: () => `<circle r="34" fill="#33373D" stroke="${INK}" stroke-width="3"/>
+    <circle r="34" fill="none" stroke="#5F646B" stroke-width="5" stroke-dasharray="4 5"/>
+    <circle r="22" fill="#D5D8DB" stroke="${INK}" stroke-width="2.5"/>
+    <circle r="9" fill="#FBFAF6" stroke="${INK}" stroke-width="2.5"/>`,
+  wheel: () => `<g transform="scale(2.4)">${wheel(0, 0)}</g>`,
+  frame: () => `<g transform="translate(6 42) scale(1.7)">
+    <path d="M17 -40 L20 -33 L25 -14 M20 -33 L-3 -10 M17 -40 L-8 -37 L-3 -10 L-25 -14 L-10 -31" fill="none" stroke="${INK}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M17 -40 L20 -33 L25 -14 M20 -33 L-3 -10 M17 -40 L-8 -37 L-3 -10 L-25 -14 L-10 -31" fill="none" stroke="#1F6B4A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M-10 -31 L4 -35" stroke="${INK}" stroke-width="7" stroke-linecap="round"/><path d="M-10 -31 L4 -35" stroke="#F2791C" stroke-width="3" stroke-linecap="round"/>
+    <path d="M17 -40 L14 -46 M9 -47 L20 -45 M-15 -40 L-4 -41" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="-3" cy="-10" r="5" fill="#FBFAF6" stroke="${INK}" stroke-width="2.5"/>
+  </g>`,
+  rotor: () => `<circle r="34" fill="#C9CBCE" stroke="${INK}" stroke-width="3"/>
+    ${Array.from({ length: 8 }, (_, i) => { const a = (i / 8) * Math.PI * 2; return `<circle cx="${r1(Math.cos(a) * 24)}" cy="${r1(Math.sin(a) * 24)}" r="4" fill="#FBFAF6" stroke="${INK}" stroke-width="1.8"/>`; }).join('')}
+    <circle r="12" fill="#8C9094" stroke="${INK}" stroke-width="2.5"/><circle r="4" fill="${INK}"/>
+    <rect x="18" y="-46" width="22" height="30" rx="7" fill="#D2453B" stroke="${INK}" stroke-width="2.5" transform="rotate(35)"/>`,
+  shock: () => `<g transform="rotate(-35)">
+    <rect x="4" y="-6" width="40" height="12" rx="3" fill="#8C9094" stroke="${INK}" stroke-width="2.5"/>
+    <rect x="-40" y="-13" width="48" height="26" rx="6" fill="#D5D8DB" stroke="${INK}" stroke-width="2.5"/>
+    <path d="M-34 -13 L-28 13 M-26 -13 L-20 13 M-18 -13 L-12 13 M-10 -13 L-4 13" fill="none" stroke="#D2453B" stroke-width="4" stroke-linecap="round"/>
+    <path d="M-34 -13 L-28 13 M-26 -13 L-20 13 M-18 -13 L-12 13 M-10 -13 L-4 13" fill="none" stroke="${INK}" stroke-width="1.2" opacity=".5"/>
+    <circle cx="-46" cy="0" r="7" fill="#FBFAF6" stroke="${INK}" stroke-width="2.5"/><circle cx="50" cy="0" r="7" fill="#FBFAF6" stroke="${INK}" stroke-width="2.5"/>
+  </g>`,
+  snack: () => `<g transform="rotate(-18)">
+    <path d="M-44 -16 L-36 -10 L-44 -4 L-36 2 L-44 8 L-36 14 L36 14 L44 8 L36 2 L44 -4 L36 -10 L44 -16Z" fill="#F2791C" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>
+    <rect x="-24" y="-16" width="48" height="30" fill="#F7A253" stroke="${INK}" stroke-width="2.5"/>
+    <path d="M-14 -4 L-4 6 L2 -6 L8 4 L14 -2" fill="none" stroke="#FBFAF6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>`,
+  wrench: () => `<g transform="rotate(-40)">
+    <rect x="-7" y="-6" width="14" height="52" rx="5" fill="#8C9094" stroke="${INK}" stroke-width="2.5"/>
+    <path d="M-16 -34 A17 17 0 1 1 16 -34 L8 -22 L-8 -22Z" fill="#B4B8BC" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M-8 -22 L8 -22 L8 -44 L-8 -44Z" fill="#FBFAF6" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="0" cy="38" r="3" fill="${INK}"/>
+  </g>`,
+  flag: (color = '#2E9E4F') => `<ellipse cx="2" cy="40" rx="18" ry="6" fill="${C.shadow}"/>
+    <path d="M0 40 L0 -40" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>
+    <path d="M2 -40 L44 -22 L2 -4Z" fill="${color}" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="16" cy="-22" r="5" fill="#FBFAF6"/>`,
+  checkered: () => `<path d="M0 44 L0 -42" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>
+    <path d="M2 -42 L50 -42 L50 -8 L2 -8Z" fill="#FBFAF6" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M2 -42h12v8.5h-12zM26 -42h12v8.5h-12zM14 -33.5h12v8.5h-12zM38 -33.5h12v8.5h-12zM2 -25h12v8.5h-12zM26 -25h12v8.5h-12zM14 -16.5h12v8.5h-12zM38 -16.5h12v8.5h-12z" fill="${INK}"/>`,
+  trophy: () => `<path d="M-24 -36 L24 -36 L20 -2 C20 10 -20 10 -20 -2Z" fill="#F2B83C" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M-24 -30 C-40 -30 -40 -8 -22 -8 M24 -30 C40 -30 40 -8 22 -8" fill="none" stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M-24 -30 C-40 -30 -40 -8 -22 -8 M24 -30 C40 -30 40 -8 22 -8" fill="none" stroke="#F2B83C" stroke-width="4"/>
+    <path d="M-6 8 L6 8 L8 22 L-8 22Z" fill="#D99A1F" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>
+    <rect x="-20" y="22" width="40" height="10" rx="3" fill="#8C6B4A" stroke="${INK}" stroke-width="2.5"/>
+    <path d="M-12 -28 L-10 -10" stroke="#FBFAF6" stroke-width="3" stroke-linecap="round" opacity=".8"/>`,
+  badge: () => `<circle r="40" fill="#E3F0E8" stroke="${INK}" stroke-width="3"/>
+    <circle cx="16" cy="-14" r="8" fill="#F2B83C" stroke="${INK}" stroke-width="2"/>
+    <path d="M-34 20 L-12 -14 L0 2 L10 -10 L34 20Z" fill="#5B7E60" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M-12 -14 L-6 -5 L-10 -3 L-12 -8 L-16 -2 L-20 -4Z" fill="#FBFAF6" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M-40 20 L40 20" stroke="${INK}" stroke-width="2.5"/>`,
+  pin: () => `<path d="M0 40 C-18 16 -26 4 -26 -10 A26 26 0 1 1 26 -10 C26 4 18 16 0 40Z" fill="#F2791C" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
+    <circle cy="-10" r="11" fill="#FBFAF6" stroke="${INK}" stroke-width="2.5"/>`,
+  helmet: () => `<g transform="translate(-4 36) scale(2.4)">
+    <path d="M8 -79 C8 -88 15 -93 22 -92 C29 -91 33 -86 33 -80 L34 -73 L28 -69 L18 -69 L10 -72Z" transform="translate(-21 80)" fill="#1F6B4A" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/>
+    <path d="M22 -92 L37 -88 L36 -85 L28 -87Z" transform="translate(-21 80)" fill="#1F6B4A" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/>
+    <path d="M14 -81 L32 -80 L32 -75 L15 -76Z" transform="translate(-21 80)" fill="#2F6F9F" stroke="${INK}" stroke-width="1.1" stroke-linejoin="round"/>
+  </g>`,
+  sign: (shape: 'circle' | 'square' | 'diamond' = 'diamond') => {
+    const col = shape === 'circle' ? '#2E9E4F' : shape === 'square' ? '#1F6FD1' : INK;
+    const mark = shape === 'circle' ? '<circle r="12" fill="' + col + '"/>' : shape === 'square' ? '<rect x="-11" y="-11" width="22" height="22" rx="2" fill="' + col + '"/>' : '<rect x="-10" y="-10" width="20" height="20" fill="' + col + '" transform="rotate(45)"/>';
+    return `<path d="M0 44 L0 0" stroke="${INK}" stroke-width="6" stroke-linecap="round"/><path d="M0 44 L0 0" stroke="#8C6B4A" stroke-width="3"/>
+      <rect x="-24" y="-44" width="48" height="44" rx="5" fill="#FBFAF6" stroke="${INK}" stroke-width="3"/>
+      <g transform="translate(0 -22)">${mark}</g>`;
+  },
+  cash: () => `<g transform="rotate(-8)">
+    <rect x="-44" y="-22" width="88" height="44" rx="5" fill="#5BAA6E" stroke="${INK}" stroke-width="2.5"/>
+    <rect x="-36" y="-15" width="72" height="30" rx="3" fill="none" stroke="#FBFAF6" stroke-width="2" opacity=".8"/>
+    <circle r="12" fill="#FBFAF6" stroke="${INK}" stroke-width="2"/>
+    <text y="5" text-anchor="middle" font-size="16" font-weight="900" font-family="system-ui, sans-serif" fill="${INK}">$</text>
+  </g>`,
+  rider: () => `<g transform="translate(0 44)">${rider(0, 0, 1, -6, '#F2791C', 'sticker-rider')}</g>`,
+};
+
+type StickerName = keyof typeof stickers;
+type Placement = [StickerName, number, number, number, number, ...string[]];
+
+const LANDSCAPE: Placement[] = [
+  ['wrench', 300, 110, 15, 0.9], ['frame', 470, 70, -6, 0.8], ['rotor', 650, 64, 10, 0.75], ['badge', 870, 80, -8, 0.9], ['pin', 1080, 110, 10, 0.8],
+  ['tire', 130, 210, -15, 1], ['snack', 130, 390, 0, 1], ['sign', 110, 560, -6, 0.9, 'circle'], ['rider', 230, 620, 0, 1.5],
+  ['trophy', 1040, 250, 8, 1.1], ['flag', 1130, 400, 0, 1, '#1F6FD1'], ['cash', 1030, 520, 0, 1], ['wheel', 1090, 660, 12, 1],
+  ['shock', 430, 690, 0, 0.9], ['helmet', 600, 690, -10, 0.8], ['sign', 780, 680, 5, 0.85, 'diamond'], ['checkered', 930, 660, 6, 0.9],
+];
+// A phone shows the middle ~560 of these 800 units, so everything sits between x 150 and 650.
+const PORTRAIT: Placement[] = [
+  ['wrench', 190, 90, 15, 0.8], ['trophy', 330, 120, 8, 0.9], ['rotor', 480, 70, 10, 0.7], ['badge', 610, 120, -8, 0.8],
+  ['tire', 170, 250, -15, 0.8], ['flag', 640, 270, 0, 0.8, '#1F6FD1'], ['pin', 165, 400, 10, 0.6], ['snack', 640, 420, 0, 0.75],
+  ['rider', 240, 940, 0, 1.2], ['cash', 430, 880, 0, 0.8], ['wheel', 600, 940, 12, 0.8],
+  ['shock', 350, 1040, 0, 0.8], ['helmet', 500, 1050, -10, 0.7], ['sign', 630, 1070, 5, 0.75, 'diamond'], ['checkered', 190, 1070, 6, 0.7],
+];
+
+function stickerLayer(id: string, places: Placement[], vw: number, vh: number): string {
+  const items = places.map(([name, x, y, rot, scale, ...args]) => {
+    const fn = stickers[name] as (...a: string[]) => string;
+    return `<g filter="url(#sticker-${id})" transform="translate(${x} ${y}) rotate(${rot}) scale(${scale})">${fn(...args)}</g>`;
+  }).join('');
+  return `<svg class="title-bg-svg ${id}" viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <filter id="sticker-${id}" x="-20%" y="-20%" width="140%" height="140%" primitiveUnits="userSpaceOnUse">
+        <feMorphology in="SourceAlpha" operator="dilate" radius="4" result="d"/>
+        <feFlood flood-color="#FFFFFF" result="w"/><feComposite in="w" in2="d" operator="in" result="edge"/>
+        <feGaussianBlur in="d" stdDeviation="3" result="b"/><feFlood flood-color="#16181A" flood-opacity=".14" result="s"/><feComposite in="s" in2="b" operator="in" result="shadow"/>
+        <feOffset in="shadow" dx="0" dy="4" result="shadow2"/>
+        <feMerge><feMergeNode in="shadow2"/><feMergeNode in="edge"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <radialGradient id="glow-${id}" cx="50%" cy="50%" r="45%"><stop offset="0" stop-color="#FFFFFF" stop-opacity=".9"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="${vw}" height="${vh}" fill="#EEF3EA"/>
+    <rect width="${vw}" height="${vh}" fill="url(#glow-${id})"/>
+    ${items}
+  </svg>`;
+}
+
+/** Full-bleed title background: game objects scattered around a clear centre, one layout per orientation. */
+export function titleBackground(): string {
+  return stickerLayer('land', LANDSCAPE, 1200, 800) + stickerLayer('port', PORTRAIT, 800, 1200);
 }
