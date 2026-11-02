@@ -12,10 +12,10 @@ export interface AvatarOpts {
 }
 
 /** Helmet outline, facing the viewer's left: peak tip, over the dome, down the back, round the chin bar. */
-const HELMET = 'M0 30 L34 13 C46 6 70 4 84 18 C96 30 98 50 92 64 C87 76 78 84 64 88 L40 90 C26 88 14 82 10 72 C9 66 12 62 18 60 L22 50 L28 42 L10 40Z';
-const SHOULDER = 'M22 106 C30 94 46 88 62 88 C78 88 92 93 100 106Z';
-const LENS = 'M24 48 C34 42 52 40 66 42 C73 43 77 46 77 50 L75 56 C62 60 42 60 27 56Z';
-const VENT = 'M16 70 L30 74 L30 82 L18 78Z';
+const HELMET = 'M0 31 L34 14 L54 6 L76 9 L91 24 L96 44 L92 62 L84 78 L68 90 L42 92 L16 82 L10 68 L20 60 L24 50 L29 42 L9 41Z';
+const SHOULDER = 'M20 106 L34 90 L64 86 L92 92 L102 106Z';
+const LENS = 'M25 47 L50 41 L72 44 L76 51 L72 57 L44 60 L27 57Z';
+const VENT = 'M16 70 L32 74 L32 82 L18 79Z';
 
 /** A rider's silhouette, `size` px square. */
 export function riderAvatar(kit: number, size = 40, opts: AvatarOpts = {}): string {
@@ -33,6 +33,7 @@ export function riderAvatar(kit: number, size = 40, opts: AvatarOpts = {}): stri
       <path d="${SHOULDER}" fill="${k.dark}"/>
       <path d="${HELMET}" fill="${k.hex}"/>
       ${stripes}
+      <path d="M34 14 L54 6 L58 20 L40 26Z M76 9 L91 24 L80 28 L70 16Z" fill="#fff" opacity=".18"/>
       <path d="${LENS}" fill="#fff" opacity=".9"/>
       <path d="${VENT}" fill="#fff" opacity=".35"/>
     </g>

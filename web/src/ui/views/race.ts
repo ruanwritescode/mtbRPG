@@ -18,6 +18,15 @@ export function fmtTime(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}.${String(r).padStart(3, '0')}`;
 }
 
+/** A stat bar for a choice: the current value, the part it will cost, and the pace it has to beat. */
+function statMeter(label: string, value: number, after: number, max: number, tick: number, ok: boolean): string {
+  const pct = (v: number) => Math.max(0, Math.min(100, (v / max) * 100));
+  return `<div class="meter ${ok ? 'ok' : 'under'}">
+    <span><em>${esc(label)}</em><b>${value}</b><i>→ ~${after}</i></span>
+    <div class="bar"><span class="keep" style="width:${pct(after)}%"></span><span class="lose" style="left:${pct(after)}%;width:${Math.max(0, pct(value) - pct(after))}%"></span><i class="tick" style="left:${pct(tick)}%" title="Pace ${tick}"></i></div>
+  </div>`;
+}
+
 function raceHead(ui: UI, s: RaceSession): string {
   const r = s.race;
   const where = r.venue ? `<span class="venue">${icon('pin', 13)} ${esc(r.venue)}${r.region ? `, ${esc(r.region)}` : ''}</span>` : r.club ? '<span class="venue">Club race</span>' : '';
@@ -62,17 +71,31 @@ export function raceView(g: GameState, ui: UI): string {
   const lanes = lanesFor(feat);
   const choices = feat.options.map((o, i) => {
     const risk = G.crashRisk(p, o.modifier, r.level);
-    let chip = '';
+    let meter = '';
+    let verdict = '';
     if (o.modifier === 'strength' || o.modifier === 'skill' || o.modifier === 'endurance') {
       const v = p[o.modifier];
-      chip = `<span class="stat-chip ${v >= pace ? 'good' : 'bad'}">${STAT_LABELS[o.modifier]} ${v} · ${v >= pace ? 'gains time' : 'loses time'}</span>`;
-    } else if (o.modifier === 'time') chip = '<span class="stat-chip neutral">Safe · loses 0.75s</span>';
-    else if (o.modifier === 'bike') chip = `<span class="stat-chip neutral">Bike health ${G.bikeHealth(p)} · wears every part</span>`;
-    const riskChip = risk > 0 ? `<span class="stat-chip risk">⚠ ${Math.round(risk * 100)}% injury risk</span>` : '';
+      const after = G.projectedStat(p, o.modifier);
+      const ok = v >= pace;
+      verdict = `<span class="stat-chip ${ok ? 'good' : 'bad'}">${ok ? 'Gains time' : 'Loses time'}</span>`;
+      meter = statMeter(STAT_LABELS[o.modifier], v, after, 102, pace, ok);
+    } else if (o.modifier === 'time') {
+      verdict = '<span class="stat-chip neutral">Plays it safe · −0.75s</span>';
+      meter = '<div class="meter none"><span>No stat used</span></div>';
+    } else if (o.modifier === 'bike') {
+      const hp = G.bikeHealth(p);
+      const after = G.projectedBikeHealth(p, r.level);
+      verdict = `<span class="stat-chip ${hp >= 30 ? 'neutral' : 'bad'}">${hp >= 30 ? 'Wears every part' : 'Bike may break'}</span>`;
+      meter = statMeter('Bike health', hp, after, 100, 30, hp >= 30);
+    }
+    const riskChip = risk > 0 ? `<span class="stat-chip risk">⚠ ${Math.round(risk * 100)}% injury</span>` : '';
     const lane = lanes[i];
     const key = lane ? `<kbd class="arrow" aria-label="${lane}">${LANE_GLYPH[lane]}</kbd>` : `<kbd>${i + 1}</kbd>`;
     const picked = flash && flash.outcome.choice === i + 1 ? 'picked' : '';
-    return `<button class="choice lane-${lane ?? 'extra'} ${picked}" data-act="line" data-n="${i + 1}" data-key="line-${i + 1}" ${flash ? 'disabled' : ''}><span class="choice-head">${key}<span class="choice-label">${esc(o.label)}</span></span><span class="chips">${chip}${riskChip}</span></button>`;
+    return `<button class="choice lane-${lane ?? 'extra'} ${picked}" data-act="line" data-n="${i + 1}" data-key="line-${i + 1}" ${flash ? 'disabled' : ''}>
+      <span class="choice-head">${key}<span class="choice-label">${esc(o.label)}</span></span>
+      ${meter}
+      <span class="chips">${verdict}${riskChip}</span></button>`;
   }).join('');
   const doneSections = flash ? s.section : s.section;
   const progress = `<div class="progress" aria-label="Section ${Math.min(doneSections + 1, r.length)} of ${r.length}">${Array.from({ length: r.length }, (_, i) => {

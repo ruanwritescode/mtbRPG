@@ -362,6 +362,28 @@ export function refuel(state: GameState, delivery = false, gallons?: number): { 
   return { gallons: g, cost: g * price };
 }
 
+/** Flying somewhere costs more than the fuel to drive there would, but uses no fuel and takes no time. */
+export const FLY_MARKUP = 1.6;
+export const FLY_MIN = 25;
+/** Trips longer than this offer a flight. */
+export const FLY_FROM = 6;
+
+export function flightCost(state: GameState, steps: number): number {
+  return Math.max(FLY_MIN, Math.ceil(steps * fuelPrice(state) * FLY_MARKUP));
+}
+
+/** Fly straight to a cell: pay the fare, land there. Nothing along the way is discovered. */
+export function fly(state: GameState, data: GameData, dest: Point, steps: number): boolean {
+  const map = currentMap(state);
+  const cost = flightCost(state, steps);
+  if (state.money < cost || !isLand(data.maps[map.zone], dest.x, dest.y)) return false;
+  state.money -= cost;
+  map.player = { ...dest };
+  const k = key(dest);
+  if (!map.visited.includes(k)) map.visited.push(k);
+  return true;
+}
+
 /** Out of fuel with no race to enter where they stand: the rider can't earn their way out. */
 export function stranded(state: GameState): boolean {
   return state.fuel < 1 && state.level === 0 && locationOf(state) !== 'race';
@@ -391,6 +413,19 @@ export function modStat(r: Racer, stat: StatName, rate: number) {
   if (rate > 0) next = v + rate * (102 - v);
   else next = v + (stat === 'skill' ? rate / 2 : rate) * v;
   r[stat] = Math.trunc(next);
+}
+
+/** Where a stat will land, on average, after using it for one section (the rider tires by 15-25%). */
+export function projectedStat(r: Racer, stat: StatName): number {
+  const v = r[stat];
+  const rate = 0.2 * attrFactor(bikeAttrs(r).lightness, -0.04);
+  return Math.trunc(v + (stat === 'skill' ? -rate / 2 : -rate) * v);
+}
+
+/** Average bike health after one section of wear on every part at this level (the whoops). */
+export function projectedBikeHealth(r: Racer, level: number): number {
+  const rate = ((5 + level * 2.5) / 100) * attrFactor(bikeAttrs(r).durability, -0.05);
+  return Math.trunc(bikeHealth(r) * (1 - rate));
 }
 
 export const DEFAULT_ATTRS: Attrs = { speed: 6, durability: 6, playfulness: 6, lightness: 6 };

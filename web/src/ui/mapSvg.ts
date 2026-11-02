@@ -153,6 +153,7 @@ export function mapSvg(
     ${landLayer(t)}
     <path d="${visited}" stroke="var(--trail)" stroke-width="0.6" stroke-linecap="round"/>
     ${path}${home}${won}${shops}${races}${finalMark}
+    <g class="map-preview" aria-hidden="true"></g>
     <g class="m-player" transform="translate(${px} ${py})"><g class="slide" style="--fx:${ox - px}px;--fy:${oy - py}px">
       <circle class="pulse" r="1.1" fill="none" stroke="${kit.hex}" stroke-width="0.15"/>
       <circle r="1.05" fill="${kit.hex}" stroke="#fff" stroke-width="0.22"/>

@@ -1,6 +1,6 @@
-// First-person trail scenes for the race. Every section is drawn from the cockpit: the trail runs away from
-// the bars and forks into up to three lanes (left, straight, right), one per line choice. Each lane carries
-// the feature that line rides (rocks, roots, a rut, a berm, a gap...) and a sign with its arrow key.
+// First-person trail scenes for the race. Every section is drawn from the cockpit: one trail runs away from
+// the bars, and each line choice is a line down it (left side, middle, right side) carrying the feature that
+// line rides (rocks, roots, a rut, a berm, a gap...) with a sign for its arrow key.
 import type { TerrainFeature } from '../engine/parse';
 import { C, INK, broadleaf, clouds, conifer, defs, fern, hatch, ink, line, r1, ridges, rng, rock } from './art';
 import { esc } from './dom';
@@ -34,29 +34,28 @@ const H = 360;
 // off the top of the trail. Everything that matters stays within x 112-688 (what a 16:10 phone shows).
 const X0 = -200;
 const VW = W - 2 * X0;
-const HZ = 150; // where the trail would vanish
-const FORK = 262; // where the trail splits
+const HZ = 168; // where the trail would vanish
 type Pt = [number, number];
 type Curve = [Pt, Pt, Pt, Pt];
 
-const CURVES: Record<Lane, Curve> = {
-  left: [[338, FORK], [306, 232], [240, 198], [186, 179]],
-  straight: [[400, FORK], [400, 228], [400, 194], [400, 171]],
-  right: [[462, FORK], [494, 232], [560, 198], [614, 179]],
+/** The one trail, from the bars to the distance; corners bend it. */
+const TRAILS = {
+  straight: [[400, 372], [400, 310], [400, 250], [400, 212]] as Curve,
+  left: [[400, 372], [400, 306], [356, 240], [272, 214]] as Curve,
+  right: [[400, 372], [400, 306], [444, 240], [528, 214]] as Curve,
 };
-// A corner bends the whole trail: the inside lane cuts tight, the outside lane swings wide then hooks back.
-const CORNER: Record<'left' | 'right', Partial<Record<Lane, Curve>>> = {
-  left: {
-    left: [[338, FORK], [302, 240], [236, 222], [166, 212]],
-    right: [[462, FORK], [548, 234], [584, 198], [526, 178]],
-  },
-  right: {
-    right: [[462, FORK], [498, 240], [564, 222], [634, 212]],
-    left: [[338, FORK], [252, 234], [216, 198], [274, 178]],
-  },
-};
+/** How wide the trail is at a given height on screen. */
+const trailWidth = (y: number) => Math.max(8, (y - HZ) * 1.85);
+/** Where each line runs across the trail (-0.5 left edge … 0.5 right edge) and how wide it is. */
+const LANE_OFF: Record<Lane, number> = { left: -0.32, straight: 0, right: 0.32 };
+const LANE_W = 0.33;
 
-const widthAt = (y: number) => Math.max(4, (y - HZ) * 0.58);
+/** A line down the trail: an offset across it, with its own width as a share of the trail's. */
+interface Track {
+  trail: Curve;
+  off: number;
+  wf: number;
+}
 
 function bez(c: Curve, t: number): Pt {
   const u = 1 - t;
@@ -65,24 +64,26 @@ function bez(c: Curve, t: number): Pt {
 }
 
 interface At { x: number; y: number; w: number; nx: number; ny: number; tx: number; ty: number }
-/** Point on a lane, its width there, the unit tangent (direction of travel) and the normal (to the rider's right). */
-function at(c: Curve, t: number): At {
-  const [x, y] = bez(c, t);
-  const [x2, y2] = bez(c, Math.min(1, t + 0.01));
-  const [x1, y1] = bez(c, Math.max(0, t - 0.01));
+/** Point on a track, its width there, the unit tangent (direction of travel) and the normal (to the rider's right). */
+function at(c: Track, t: number): At {
+  const [x, y] = bez(c.trail, t);
+  const [x2, y2] = bez(c.trail, Math.min(1, t + 0.01));
+  const [x1, y1] = bez(c.trail, Math.max(0, t - 0.01));
   const len = Math.hypot(x2 - x1, y2 - y1) || 1;
   const tx = (x2 - x1) / len, ty = (y2 - y1) / len;
-  return { x, y, w: widthAt(y), tx, ty, nx: -ty, ny: tx };
+  const nx = -ty, ny = tx;
+  const tw = trailWidth(y);
+  return { x: x + nx * c.off * tw, y: y + ny * c.off * tw, w: tw * c.wf, tx, ty, nx, ny };
 }
-/** A point across the lane: `o` is -0.5 (left edge) to 0.5 (right edge), in lane widths. */
+/** A point across the track: `o` is -0.5 (left edge) to 0.5 (right edge), in track widths. */
 function across(p: At, o: number): Pt {
   return [p.x + p.nx * o * p.w, p.y + p.ny * o * p.w];
 }
 const P = ([x, y]: Pt) => `${r1(x)} ${r1(y)}`;
 const pathOf = (pts: Pt[], close = false) => pts.map((p, i) => `${i ? 'L' : 'M'}${P(p)}`).join('') + (close ? 'Z' : '');
 
-/** Outline of a lane strip from t0 to t1, between offsets o0 and o1 across it. */
-function strip(c: Curve, t0 = 0, t1 = 1, o0 = -0.5, o1 = 0.5, n = 22): Pt[] {
+/** Outline of a track strip from t0 to t1, between offsets o0 and o1 across it. */
+function strip(c: Track, t0 = 0, t1 = 1, o0 = -0.5, o1 = 0.5, n = 22): Pt[] {
   const a: Pt[] = [];
   const b: Pt[] = [];
   for (let i = 0; i <= n; i++) {
@@ -92,14 +93,14 @@ function strip(c: Curve, t0 = 0, t1 = 1, o0 = -0.5, o1 = 0.5, n = 22): Pt[] {
   }
   return [...a, ...b.reverse()];
 }
-/** A path along the lane at offset `o`. */
-function along(c: Curve, t0: number, t1: number, o = 0, n = 18): string {
+/** A path along the track at offset `o`. */
+function along(c: Track, t0: number, t1: number, o = 0, n = 18): string {
   const pts: Pt[] = [];
   for (let i = 0; i <= n; i++) pts.push(across(at(c, t0 + ((t1 - t0) * i) / n), o));
   return pathOf(pts);
 }
-/** A line straight across the lane at t, a little wider than the lane by `over`. */
-function crossLine(c: Curve, t: number, over = 1): [Pt, Pt] {
+/** A line straight across the track at t, a little wider than the track by `over`. */
+function crossLine(c: Track, t: number, over = 1): [Pt, Pt] {
   const p = at(c, t);
   return [across(p, -0.5 * over), across(p, 0.5 * over)];
 }
@@ -124,7 +125,7 @@ function decoFor(label: string, modifier: string): Deco {
 }
 
 /** A roller or whoop seen from behind: a lit face rising to an inked crest. */
-function hump(c: Curve, t: number, size: number): string {
+function hump(c: Track, t: number, size: number): string {
   const p = at(c, t);
   const [l, r] = crossLine(c, t, 1.02);
   const h = Math.max(2, p.w * 0.2 * size);
@@ -135,20 +136,20 @@ function hump(c: Curve, t: number, size: number): string {
 }
 
 /** An airtime arc from t0 to t1, lifted `lift` px above the lane. */
-function airArc(c: Curve, t0: number, t1: number, lift: number, tone: 'fast' | 'safe' | 'risky' = 'risky'): string {
+function airArc(c: Track, t0: number, t1: number, lift: number, tone: 'fast' | 'safe' | 'risky' = 'risky'): string {
   const a = at(c, t0);
   const b = at(c, t1);
   const m = at(c, (t0 + t1) / 2);
   return line(`M${r1(a.x)} ${r1(a.y)}Q${r1(m.x)} ${r1(m.y - lift)} ${r1(b.x)} ${r1(b.y)}`, tone);
 }
 
-function gapBand(id: string, c: Curve, t0: number, t1: number, over = 1.15): string {
+function gapBand(id: string, c: Track, t0: number, t1: number, over = 1.15): string {
   const pts = strip(c, t0, t1, -0.5 * over, 0.5 * over, 6);
   const d = pathOf(pts, true);
   return `<path d="${d}" fill="#3F4B41" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>${hatch(id, d, 0.35)}`;
 }
 
-function deco(id: string, kind: Deco, c: Curve, lane: Lane, seed: number): string {
+function deco(id: string, kind: Deco, c: Track, lane: Lane, seed: number): string {
   const rand = rng(seed);
   switch (kind) {
     case 'rocks': {
@@ -318,24 +319,19 @@ function treeline(seed: number): string {
   return out;
 }
 
-function sides(seed: number, lanes: Lane[]): string {
-  let out = conifer(84, 330, 2.5, seed) + conifer(170, 262, 1.5, seed + 1) + broadleaf(240, 214, 0.7) + conifer(126, 214, 0.9, seed + 2);
-  out += conifer(716, 330, 2.5, seed + 3) + conifer(630, 262, 1.5, seed + 4) + broadleaf(564, 214, 0.7) + conifer(676, 214, 0.9, seed + 5);
+function sides(seed: number): string {
+  let out = conifer(84, 330, 2.5, seed) + conifer(170, 262, 1.5, seed + 1) + broadleaf(236, 212, 0.7) + conifer(126, 214, 0.9, seed + 2);
+  out += conifer(716, 330, 2.5, seed + 3) + conifer(630, 262, 1.5, seed + 4) + broadleaf(564, 212, 0.7) + conifer(676, 214, 0.9, seed + 5);
+  out += fern(200, 352, 1.4) + fern(600, 352, 1.4, true) + rock(214, 300, 1.1, seed + 6) + rock(590, 306, 0.9, seed + 7);
   // Out past the edges, seen only in wide views.
   out += conifer(-150, 300, 2, seed + 20) + conifer(-60, 236, 1.2, seed + 21) + broadleaf(10, 222, 0.8) + rock(-90, 330, 1.2, seed + 22) + fern(-20, 350, 1.3);
   out += conifer(950, 300, 2, seed + 23) + conifer(860, 236, 1.2, seed + 24) + broadleaf(790, 222, 0.8) + rock(890, 330, 1.2, seed + 25) + fern(820, 350, 1.3, true);
-  out += fern(214, 352, 1.4) + fern(586, 352, 1.4, true) + rock(250, 310, 1.1, seed + 6) + rock(556, 316, 0.9, seed + 7);
-  // Fill the wedges between lanes, and the place of any missing lane.
-  if (lanes.includes('left') && lanes.includes('straight')) out += conifer(318, 196, 0.55, seed + 8) + fern(338, 214, 0.5);
-  if (lanes.includes('right') && lanes.includes('straight')) out += conifer(484, 196, 0.55, seed + 9) + fern(462, 214, 0.5, true);
-  if (!lanes.includes('straight')) out += broadleaf(392, 214, 0.95) + conifer(424, 206, 0.7, seed + 10) + rock(406, 238, 0.9, seed + 11);
-  if (!lanes.includes('left')) out += conifer(262, 216, 1, seed + 12) + rock(312, 230, 0.9, seed + 13) + fern(286, 240, 0.8);
-  if (!lanes.includes('right')) out += conifer(538, 216, 1, seed + 14) + rock(488, 230, 0.9, seed + 15) + fern(514, 240, 0.8, true);
+  out += conifer(318, 190, 0.5, seed + 8) + conifer(484, 190, 0.5, seed + 9) + fern(296, 206, 0.5) + fern(506, 206, 0.5, true);
   return out;
 }
 
 /** Course tape along both sides of a lane: there's only one way through. */
-function tape(c: Curve): string {
+function tape(c: Track): string {
   let out = '';
   for (const o of [-0.85, 0.85]) {
     const d = along(c, 0.02, 0.96, o);
@@ -344,8 +340,8 @@ function tape(c: Curve): string {
     for (const t of [0.06, 0.3, 0.56, 0.82]) {
       const p = at(c, t);
       const [x, y] = across(p, o);
-      const h = p.w * 0.35;
-      out += `<path d="M${r1(x)} ${r1(y + 2)}V${r1(y - h)}" stroke="${INK}" stroke-width="${r1(Math.max(1.5, p.w * 0.05))}" stroke-linecap="round"/>`;
+      const h = Math.min(26, p.w * 0.2);
+      out += `<path d="M${r1(x)} ${r1(y + 2)}V${r1(y - h)}" stroke="${INK}" stroke-width="${r1(Math.min(3, Math.max(1.5, p.w * 0.03)))}" stroke-linecap="round"/>`;
     }
   }
   return out;
@@ -393,14 +389,15 @@ function cockpit(): string {
   </g>`;
 }
 
-/** The sign at the end of a lane: arrow key chip plus the line's name, on a short post. */
-function sign(lane: Lane, label: string, end: Pt): string {
+/** The sign for a line: arrow key chip plus the line's name, up in the sky with a pointer down to the line. */
+function sign(lane: Lane, label: string, slotX: number, target: Pt): string {
   const tw = Math.round(label.length * 8.4 + 52);
-  const y = lane === 'straight' ? 128 : 142;
-  const x = Math.min(Math.max(end[0], 124 + tw / 2), 676 - tw / 2);
+  const y = lane === 'straight' ? 122 : 136;
+  const x = Math.min(Math.max(slotX, 124 + tw / 2), 676 - tw / 2);
   const rot = lane === 'left' ? 180 : lane === 'straight' ? -90 : 0;
   const chipX = -tw / 2 + 18;
-  return `<path d="M${r1(x)} ${y + 14}L${r1(end[0])} ${r1(end[1] - 4)}" stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>
+  return `<path d="M${r1(x)} ${y + 14}L${r1(target[0])} ${r1(target[1])}" stroke="${INK}" stroke-width="2" stroke-dasharray="4 4" stroke-linecap="round" opacity=".7"/>
+    <circle cx="${r1(target[0])}" cy="${r1(target[1])}" r="4" fill="#FBFAF6" stroke="${INK}" stroke-width="2"/>
     <g class="lane-sign" transform="translate(${r1(x)} ${y})">
       <rect x="${-tw / 2}" y="-14" width="${tw}" height="31" rx="15.5" fill="#D9D5C7" stroke="${INK}" stroke-width="2"/>
       <rect class="sign-face" x="${-tw / 2}" y="-17" width="${tw}" height="31" rx="15.5" fill="#FBFAF6" stroke="${INK}" stroke-width="2"/>
@@ -410,39 +407,36 @@ function sign(lane: Lane, label: string, end: Pt): string {
     </g>`;
 }
 
-/** First-person scene for a trail section: one lane per option, each drawn with the line it rides. */
+/** First-person scene for a trail section: one trail, with a line down it for every option. */
 export function povScene(feat: TerrainFeature, index: number): string {
   const id = `pov${index}`;
   const lanes = lanesFor(feat);
   const title = feat.title.toLowerCase();
-  const bend = title.includes('left hand') ? CORNER.left : title.includes('right hand') ? CORNER.right : {};
-  const curves = lanes.map((l) => bend[l] ?? CURVES[l]);
+  const trail = title.includes('left hand') ? TRAILS.left : title.includes('right hand') ? TRAILS.right : TRAILS.straight;
+  const whole: Track = { trail, off: 0, wf: 1 };
+  const tracks: Track[] = lanes.length === 1 ? [whole] : lanes.map((l) => ({ trail, off: LANE_OFF[l], wf: LANE_W }));
 
-  // The trunk from the bars to the fork, as wide as the lanes it feeds.
-  const starts = curves.map((c) => c[0][0]);
-  const half = widthAt(FORK) / 2;
-  const trunk: Pt[] = [[400 - 175, 372], [Math.min(...starts) - half, FORK], [Math.max(...starts) + half, FORK], [400 + 175, 372]];
-  const shapes = [pathOf(trunk, true), ...curves.map((c) => pathOf(strip(c), true))];
-  // Draw every shape with a thick ink stroke, then fill them all again on top: one clean merged outline.
-  const trail = `<g>${shapes.map((d) => `<path d="${d}" fill="${INK}" stroke="${INK}" stroke-width="4.5" stroke-linejoin="round"/>`).join('')}</g>
-    <g fill="${C.dirt}">${shapes.map((d) => `<path d="${d}"/>`).join('')}</g>
-    <g fill="url(#dots-${id})" opacity=".2">${shapes.map((d) => `<path d="${d}"/>`).join('')}</g>
-    <path d="${pathOf([[400 - 175, 372], [Math.min(...starts) - half, FORK], [Math.min(...starts) - half + 26, FORK], [400 - 120, 372]], true)}" fill="${C.dirtDark}" opacity=".28"/>
-    ${ink(`M${400 - 60} 372 L${Math.min(...starts) + 4} ${FORK + 6} M${400 + 60} 372 L${Math.max(...starts) - 4} ${FORK + 6}`, 1, 'opacity=".35"')}`;
+  // The trail itself: one ribbon from the bars to the distance, shaded on the right edge.
+  const body = pathOf(strip(whole, 0, 1, -0.5, 0.5, 30), true);
+  const shade = pathOf(strip(whole, 0, 1, 0.42, 0.5, 30), true);
+  const trailSvg = `<path d="${body}" fill="${C.dirt}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
+    <path d="${body}" fill="url(#dots-${id})" opacity=".2"/>
+    <path d="${shade}" fill="${C.dirtDark}" opacity=".35"/>
+    ${ink(along(whole, 0.02, 0.98, -0.5), 1, 'opacity=".35"')}${ink(along(whole, 0.02, 0.98, 0.5), 1, 'opacity=".35"')}`;
 
+  // Sign slots spread across the sky so labels never crowd each other.
+  const slots: Record<Lane, number> = lanes.length === 2 && !lanes.includes('straight') ? { left: 290, straight: 400, right: 510 } : { left: 236, straight: 400, right: 564 };
   const lanesSvg = lanes.map((lane, i) => {
-    const c = curves[i];
+    const t = tracks[i];
     const o = feat.options[i];
-    const end = bez(c, 1);
-    const hl = pathOf(strip(c, 0, 1, -0.56, 0.56), true);
+    const hl = pathOf(strip(t, 0.01, 0.99, -0.5, 0.5), true);
     const kind = decoFor(o.label, o.modifier);
-    const woods = conifer(r1(end[0] - 12), r1(end[1] + 2), 0.42, index * 9 + i) + conifer(r1(end[0] + 13), r1(end[1] + 1), 0.38, index * 9 + i + 4);
+    const target = at(t, 0.72);
     return `<g class="lane" data-act="line" data-n="${i + 1}" data-lane="${lane}">
-      ${deco(id, kind, c, lane, index * 31 + i * 7 + 3)}
-      ${lanes.length === 1 ? tape(c) : ''}
-      ${woods}
       <path class="lane-hl" d="${hl}" fill="#FBFAF6" fill-opacity="0" stroke="#58CC02" stroke-opacity="0" stroke-width="3" stroke-linejoin="round"/>
-      ${sign(lane, o.label, end)}
+      ${deco(id, kind, t, lane, index * 31 + i * 7 + 3)}
+      ${lanes.length === 1 ? tape(t) : ''}
+      ${sign(lane, o.label, slots[lane], [target.x, target.y])}
     </g>`;
   }).join('');
 
@@ -454,8 +448,8 @@ export function povScene(feat: TerrainFeature, index: number): string {
     <g transform="translate(0 -46)">${hills}<g transform="translate(1 0) scale(-1 1)">${hills}</g><g transform="translate(1599 0) scale(-1 1)">${hills}</g></g>
     ${grassland(index + 50)}
     ${treeline(index + 70)}
-    ${sides(index * 13 + 100, lanes)}
-    ${trail}
+    ${sides(index * 13 + 100)}
+    ${trailSvg}
     ${lanesSvg}
     ${cockpit()}
   </svg>`;

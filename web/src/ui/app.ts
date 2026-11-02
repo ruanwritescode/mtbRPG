@@ -27,6 +27,7 @@ interface ModalAction {
   label: string;
   run: () => void;
   kind?: 'primary' | 'danger' | 'plain';
+  disabled?: boolean;
 }
 interface Modal {
   title: string;
@@ -56,6 +57,9 @@ export class App {
   private toastTimer: number | null = null;
   private firstShop = false;
   private picking = false;
+  private lastBody = '';
+  private lastOverlay = '';
+  private lastScreen: Screen | null = null;
   private ui: UI = {
     screen: 'title',
     cart: G.emptyCart(),
@@ -77,6 +81,8 @@ export class App {
   constructor(root: HTMLElement) {
     this.root = root;
     root.addEventListener('click', (e) => this.onClick(e));
+    root.addEventListener('mousemove', (e) => this.onHover(e));
+    root.addEventListener('mouseleave', () => this.previewTrip(null));
     root.addEventListener('submit', (e) => this.onSubmit(e));
     root.addEventListener(
       'toggle',
@@ -140,7 +146,7 @@ export class App {
   private show(modal: Modal) {
     this.modal = modal;
     this.render();
-    queueMicrotask(() => this.root.querySelector<HTMLButtonElement>('.modal .btn.primary, .modal .btn')?.focus());
+    queueMicrotask(() => (this.root.querySelector<HTMLButtonElement>('.modal .btn.primary') ?? this.root.querySelector<HTMLButtonElement>('.modal .btn'))?.focus());
   }
 
   private close() {
@@ -184,7 +190,7 @@ export class App {
     const svg = target.closest<SVGSVGElement>('svg.map-svg');
     if (svg && this.screen === 'map' && !this.modal) {
       const cell = cellFromEvent(svg, e, data.maps[G.zoneOf(this.g)].start.x % 2);
-      if (cell) this.walkTo(cell);
+      if (cell) this.planTrip(cell);
       return;
     }
     const el = target.closest<HTMLElement>('[data-act]');
@@ -192,6 +198,41 @@ export class App {
     const act = el.dataset.act!;
     if (act !== 'line' && act !== 'dpad' && act !== 'sound') sfx.play('tap');
     this.act(act, el.dataset);
+  }
+
+  /** Hovering the map previews the trip: the route, and what it costs in fuel. */
+  private onHover(e: MouseEvent) {
+    if (this.screen !== 'map' || this.modal || !this.game) return;
+    const svg = (e.target as HTMLElement).closest<SVGSVGElement>('svg.map-svg');
+    if (!svg) return this.previewTrip(null);
+    const cell = cellFromEvent(svg, e, data.maps[G.zoneOf(this.g)].start.x % 2);
+    this.previewTrip(cell);
+  }
+
+  private previewKey = '';
+  private previewTrip(cell: Point | null) {
+    const g = this.game;
+    const layer = this.root.querySelector<SVGGElement>('.map-preview');
+    if (!layer || !g) return;
+    const path = cell ? this.pathTo(cell) : null;
+    const k = path ? `${cell!.x},${cell!.y}` : '';
+    if (k === this.previewKey) return;
+    this.previewKey = k;
+    if (!path || !path.length) {
+      layer.innerHTML = '';
+      return;
+    }
+    const map = G.currentMap(g);
+    const pts = [map.player, ...path].map((p) => `${p.x + 0.5} ${p.y * 2 + 1}`).join('L');
+    const end = path[path.length - 1];
+    const n = path.length;
+    const text = n >= G.FLY_FROM
+      ? `${n} steps · ${n} gal or fly ${money(G.flightCost(g, n))}`
+      : `${n} step${n > 1 ? 's' : ''} · ${n} gal · ${money(n * G.fuelPrice(g))}`;
+    const short = g.fuel < n;
+    const w = text.length * 0.62 + 1.6;
+    layer.innerHTML = `<path d="M${pts}" fill="none" stroke="${short ? 'var(--danger)' : 'var(--ink)'}" stroke-width="0.28" stroke-dasharray="0.5 0.6" stroke-linecap="round" opacity=".7"/>
+      <g transform="translate(${end.x + 0.5} ${end.y * 2 - 1.6})"><rect x="${-w / 2}" y="-1.5" width="${w}" height="2.3" rx="1.15" fill="${short ? 'var(--danger)' : 'var(--ink)'}"/><text y="0.25" text-anchor="middle" font-size="1.15" font-weight="800" fill="#fff">${esc(text)}</text></g>`;
   }
 
   private onSubmit(e: SubmitEvent) {
@@ -213,8 +254,16 @@ export class App {
       if (k === 'Escape' && this.modal.cancel) {
         e.preventDefault();
         this.modal.cancel();
+      } else if (k === 'Enter' && !(e.target as HTMLElement).closest('.modal .btn')) {
+        // Enter confirms the primary action even when the focus isn't on a button.
+        const primary = this.modal.actions.find((a) => a.kind === 'primary');
+        if (primary) {
+          e.preventDefault();
+          sfx.play('tap');
+          primary.run();
+        }
       }
-      return; // Enter/Space activate the focused button natively
+      return; // otherwise Enter/Space activate the focused button natively
     }
     const keyNum = /^[1-9]$/.test(k) ? parseInt(k, 10) : 0;
     switch (this.screen) {
@@ -475,11 +524,11 @@ export class App {
     return true;
   }
 
-  private walkTo(goal: Point) {
-    this.stopWalk();
+  /** Shortest route to a cell, or null when it can't be reached. Empty when already there. */
+  private pathTo(goal: Point): Point[] | null {
     const map = G.currentMap(this.g);
     const t = data.maps[map.zone];
-    if (!isLand(t, goal.x, goal.y)) return;
+    if (!isLand(t, goal.x, goal.y)) return null;
     const start = map.player;
     const prev = new Map<string, Point | null>([[G.key(start), null]]);
     const queue: Point[] = [start];
@@ -493,9 +542,54 @@ export class App {
         queue.push(n);
       }
     }
-    if (!prev.has(G.key(goal))) return;
+    if (!prev.has(G.key(goal))) return null;
     const path: Point[] = [];
     for (let p: Point | null = goal; p && G.key(p) !== G.key(start); p = prev.get(G.key(p)) ?? null) path.unshift(p);
+    return path;
+  }
+
+  /** A click on the map: short trips just go; long ones ask whether to drive or fly. */
+  private planTrip(goal: Point) {
+    this.stopWalk();
+    const path = this.pathTo(goal);
+    if (!path || !path.length) return;
+    const g = this.g;
+    const n = path.length;
+    if (n < G.FLY_FROM) return this.walkPath(path);
+    const map = G.currentMap(g);
+    const where = G.placeName(map, goal);
+    const fare = G.flightCost(g, n);
+    const canDrive = g.fuel >= n;
+    const canFly = g.money >= fare;
+    this.previewTrip(null);
+    this.show({
+      title: where ? `Head to ${esc(where)}?` : 'Head out there?',
+      body: `<p>It’s <b>${n} steps</b> away.</p>
+        <ul class="trip"><li>${icon('fuel', 16)}<span><b>Drive</b> · ${n} gal of fuel (${money(n * G.fuelPrice(g))}). You have ${g.fuel} gal.${canDrive ? '' : ' <span class="bad">Not enough fuel.</span>'}</span></li>
+        <li>${icon('plane', 16)}<span><b>Fly</b> · ${money(fare)}, no fuel, lands you there right away.${canFly ? '' : ' <span class="bad">You can’t afford the fare.</span>'}</span></li></ul>`,
+      cancel: () => {
+        this.close();
+        this.render();
+      },
+      actions: [
+        { label: 'Not now', kind: 'plain', run: () => (this.close(), this.render()) },
+        { label: `${icon('plane', 16)} Fly · ${money(fare)}`, kind: canDrive ? 'plain' : 'primary', disabled: !canFly, run: () => (this.close(), this.flyTo(goal, n)) },
+        { label: `${icon('fuel', 16)} Drive · ${n} gal`, kind: canDrive ? 'primary' : 'plain', disabled: !canDrive, run: () => (this.close(), this.walkPath(path)) },
+      ],
+    });
+  }
+
+  private flyTo(goal: Point, steps: number) {
+    const g = this.g;
+    const fare = G.flightCost(g, steps);
+    if (!G.fly(g, data, goal, steps)) return this.render();
+    this.say(`Flew ${steps} steps for ${money(fare)}.`, 'info');
+    this.flashToast(`✈ ${money(fare)}`);
+    sfx.play('cash');
+    this.commit();
+  }
+
+  private walkPath(path: Point[]) {
     this.ui.walkPath = path;
     const tick = () => {
       const next = this.ui.walkPath.shift();
@@ -876,7 +970,28 @@ export class App {
     }
     const focusAct = (document.activeElement as HTMLElement | null)?.dataset?.act;
     const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.key;
-    this.root.innerHTML = body + this.modalView() + (this.toast ? `<div class="toast" role="status">${esc(this.toast)}</div>` : '');
+    // Two layers, each replaced only when its HTML changes, so opening a menu doesn't redraw the map and
+    // entry animations don't replay on every click.
+    let screenEl = this.root.querySelector<HTMLElement>(':scope > .layer-screen');
+    let overlayEl = this.root.querySelector<HTMLElement>(':scope > .layer-overlay');
+    if (!screenEl || !overlayEl) {
+      this.root.innerHTML = '<div class="layer-screen"></div><div class="layer-overlay"></div>';
+      screenEl = this.root.querySelector<HTMLElement>(':scope > .layer-screen')!;
+      overlayEl = this.root.querySelector<HTMLElement>(':scope > .layer-overlay')!;
+    }
+    if (body !== this.lastBody) {
+      screenEl.innerHTML = body;
+      screenEl.classList.toggle('enter', this.screen !== this.lastScreen);
+      this.lastBody = body;
+      this.lastScreen = this.screen;
+    }
+    const overlay = this.modalView() + (this.toast ? `<div class="toast" role="status">${esc(this.toast)}</div>` : '');
+    if (overlay !== this.lastOverlay) {
+      const hadModal = !!overlayEl.querySelector('.modal');
+      overlayEl.innerHTML = overlay;
+      overlayEl.classList.toggle('enter', !hadModal);
+      this.lastOverlay = overlay;
+    }
     if (focusAct && !this.modal) {
       const sel = focusKey ? `[data-key="${CSS.escape(focusKey)}"]` : `[data-act="${CSS.escape(focusAct)}"]`;
       this.root.querySelector<HTMLElement>(sel)?.focus();
@@ -887,7 +1002,7 @@ export class App {
     const m = this.modal;
     if (!m) return '';
     const btns = m.actions
-      .map((a, i) => `<button class="btn ${a.kind ?? 'plain'}" data-act="modal" data-i="${i}">${esc(a.label)}</button>`)
+      .map((a, i) => `<button class="btn ${a.kind ?? 'plain'}" data-act="modal" data-i="${i}" ${a.disabled ? 'disabled' : ''}>${a.label}</button>`)
       .join('');
     return `<div class="modal-backdrop"><div class="modal ${m.wide ? 'wide' : ''} ${m.cls ?? ''}" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <h2 id="modal-title">${m.title}</h2><div class="modal-body">${m.body}</div><div class="modal-actions">${btns}</div></div></div>`;
