@@ -17,7 +17,7 @@ import { sfx } from './sound';
 import type { Screen, Tone, UI } from './state';
 import { icon } from './widgets';
 import { careerBody } from './views/career';
-import { hudView } from './views/hud';
+import { headerView, metersView } from './views/hud';
 import { mapView } from './views/map';
 import { raceView } from './views/race';
 import { shopModal } from './views/shop';
@@ -118,6 +118,7 @@ export class App {
   }
 
   private say(text: string, tone: Tone = 'info') {
+    if (this.ui.log[0]?.text === text) return; // don't stack the same message
     this.ui.log.unshift({ text, tone });
     this.ui.log.length = Math.min(this.ui.log.length, 6);
   }
@@ -555,7 +556,10 @@ export class App {
     if (!path || !path.length) return;
     const g = this.g;
     const n = path.length;
-    if (n < G.FLY_FROM) return this.walkPath(path);
+    if (n < G.FLY_FROM) {
+      this.flashToast(`${n} step${n > 1 ? 's' : ''} · ${n} gal`);
+      return this.walkPath(path);
+    }
     const map = G.currentMap(g);
     const where = G.placeName(map, goal);
     const fare = G.flightCost(g, n);
@@ -1010,7 +1014,6 @@ export class App {
 
   private gameView(): string {
     const g = this.g;
-    const zone = G.zoneOf(g);
     let stage = '';
     let paceLevel = g.level + 1;
     if (this.screen === 'map' || this.screen === 'shop') stage = mapView(g, this.ui);
@@ -1019,17 +1022,8 @@ export class App {
       paceLevel = g.activeRace?.race.level ?? this.ui.result?.session.race.level ?? paceLevel;
     }
     return `<div class="game screen-${this.screen}">
-      <header class="topbar">
-        <button class="logo small" data-act="menu" aria-label="Menu">mtb<span>RPG</span></button>
-        <span class="chip zone">${zone === 'usa' ? '🇺🇸' : '🇪🇺'} ${ZONE_LABELS[zone]}</span>
-        <span class="spacer"></span>
-        <span class="chip top fuel-chip ${g.fuel <= 5 ? 'low' : ''}" title="Fuel">${icon('fuel', 15)} ${g.fuel}<small>/${G.FUEL_TANK}</small></span>
-        <span class="chip top" title="Ranking points">${icon('star', 15)} ${g.player.points.toLocaleString('en-US')}</span>
-        <span class="chip top ${g.money < 0 ? 'neg' : ''}" title="Money">${icon('cash', 15)} ${money(g.money)}</span>
-        <button class="btn ghost small iconbtn" data-act="sound" aria-label="${this.ui.muted ? 'Unmute' : 'Mute'} sound">${icon(this.ui.muted ? 'mute' : 'sound', 18)}</button>
-        <button class="btn ghost small" data-act="menu" aria-label="Open menu">${icon('menu', 18)} Menu</button>
-      </header>
-      ${hudView(g, this.ui, paceLevel)}
+      ${headerView(g, this.ui)}
+      ${metersView(g, this.ui, paceLevel)}
       <section class="stage">${stage}</section>
       ${this.screen === 'shop' ? shopModal(g, this.ui) : ''}
     </div>`;

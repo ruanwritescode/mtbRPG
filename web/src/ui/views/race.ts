@@ -32,7 +32,7 @@ function raceHead(ui: UI, s: RaceSession): string {
   const where = r.venue ? `<span class="venue">${icon('pin', 13)} ${esc(r.venue)}${r.region ? `, ${esc(r.region)}` : ''}</span>` : r.club ? '<span class="venue">Club race</span>' : '';
   return `<div class="race-head">
     <div><h2>${esc(r.name)}</h2><div class="muted race-meta">${levelBadge(r.level)} · ${r.length} sections · <span title="Stats above this gain time, below it lose time">pace ${G.turningPoint(r.level)}</span> ${where}</div></div>
-    ${ui.raceView === 'ride' ? `<div class="split ${s.gap > 0 ? 'ahead' : s.gap < 0 ? 'behind' : ''}"><span>Split</span><b data-gap="${s.gap}">${seconds(s.gap)}</b></div>` : ''}
+    ${ui.raceView === 'ride' ? `<div class="split ${s.gap > 0 ? 'ahead' : s.gap < 0 ? 'behind' : ''}"><span>Split to the leader</span><b data-gap="${s.gap}">${seconds(s.gap)}</b>${s.last ? `<small class="${s.last.gapAfter - s.last.gapBefore >= 0 ? 'good' : 'bad'}">last ${seconds(s.last.gapAfter - s.last.gapBefore)}</small>` : ''}</div>` : ''}
   </div>`;
 }
 
@@ -109,7 +109,6 @@ export function raceView(g: GameState, ui: UI): string {
   return `<div class="race ${flash ? 'flashing' : ''}">${head}${progress}
     <div class="scene">${povScene(feat, featIndex)}<div class="section-label">Section ${sectionNo} / ${r.length} · ${esc(feat.title)}</div>${flash ? outcomeOverlay(flash.outcome) : ''}</div>
     <div class="choices lanes">${choices}</div>
-    ${lastOutcome(s)}
     <div class="race-foot"><span class="muted small">${hint}</span><button class="btn ghost small" data-act="quit-race">Quit race <kbd>Esc</kbd></button></div>
   </div>`;
 }
@@ -133,18 +132,6 @@ function outcomeOverlay(o: ReturnType<typeof G.rideSection>): string {
     if (bits.length) sub += ` · ${bits.join(' · ')}`;
   }
   return `<div class="outcome ${cls}"><b>${main}</b><span>${esc(sub)}</span></div>`;
-}
-
-function lastOutcome(s: RaceSession): string {
-  const o = s.last;
-  if (!o) return '';
-  const feat = data.terrain[o.feature];
-  const d = o.gapAfter - o.gapBefore;
-  const bits = [`<span class="${d >= 0 ? 'good' : 'bad'}">${seconds(d)}</span>`];
-  if (o.stat) bits.push(`${STAT_LABELS[o.stat.name]} ${o.stat.before}→${o.stat.after}`);
-  for (const dm of o.damage) if (dm.after < dm.before) bits.push(`${PART_LABELS[dm.slot]} −${dm.before - dm.after}`);
-  bits.push(`Tread ${o.tireLife}`);
-  return `<div class="last"><b>Last section</b> ${esc(feat.title)} — ${esc(feat.options[o.choice - 1]?.label ?? '')} <span class="last-bits">${bits.join('<i>·</i>')}</span></div>`;
 }
 
 function rowAvatar(row: ResultRow, g: GameState, size: number): string {

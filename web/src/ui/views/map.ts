@@ -44,12 +44,14 @@ export function mapView(g: GameState, ui: UI): string {
   const fuelBtn = station
     ? `<button class="btn plain" data-act="fuel" ${need ? '' : 'disabled'} title="Fuel station: ${money(G.fuelPrice(g))} a gallon"><kbd>5</kbd>${icon('fuel', 16)} Fill up <small>${need ? `${need} gal · ${money(need * G.fuelPrice(g))}` : 'full'}</small></button>`
     : `<button class="btn plain" data-act="fuel" ${need ? '' : 'disabled'} title="Delivered anywhere at ${G.DELIVERY_MARKUP}× the price"><kbd>5</kbd>${icon('fuel', 16)} Fuel delivery <small>${G.DELIVERY_GALLONS} gal · ${money(Math.min(G.DELIVERY_GALLONS, need) * G.fuelPrice(g, true))}</small></button>`;
+  // Only the actions that make sense right now: fuel when there's a pump or the tank is low, a local
+  // race when the card above doesn't already offer one.
+  const showFuel = station ? need > 0 : g.fuel <= 10 && need > 0;
   const actions = `<div class="actions">
-    ${g.level ? `<button class="btn plain" data-act="local" ${blocker ? 'disabled' : ''} title="A race you can enter anywhere, for points and prize money"><kbd>1</kbd>${icon('flag', 16)} Local race</button>` : ''}
-    ${fuelBtn}
-    <button class="btn plain" data-act="eat" ${p.snacks ? '' : 'disabled'} title="Restores all four stats"><kbd>2</kbd>${icon('snack', 16)} Eat a snack <small>${p.snacks} left</small></button>
-    <button class="btn plain" data-act="repair" ${p.toolkits ? '' : 'disabled'} title="Repairs every working part"><kbd>3</kbd>${icon('wrench', 16)} Use a toolkit <small>${p.toolkits} left</small></button>
-    <button class="btn plain" data-act="save"><kbd>4</kbd>${icon('save', 16)} Save game</button>
+    ${g.level && loc !== 'open' ? `<button class="btn plain" data-act="local" ${blocker ? 'disabled' : ''} title="A race you can enter anywhere, for points and prize money"><kbd>1</kbd>${icon('flag', 16)} Local race</button>` : ''}
+    ${showFuel ? fuelBtn : ''}
+    <button class="btn plain" data-act="eat" ${p.snacks ? '' : 'disabled'} title="Restores all four stats"><kbd>2</kbd>${icon('snack', 16)} Eat a snack <small>${p.snacks ? `${p.snacks} left` : 'none · buy at a shop'}</small></button>
+    <button class="btn plain" data-act="repair" ${p.toolkits ? '' : 'disabled'} title="Repairs every working part"><kbd>3</kbd>${icon('wrench', 16)} Use a toolkit <small>${p.toolkits ? `${p.toolkits} left` : 'none · buy at a shop'}</small></button>
   </div>`;
   const log = ui.log.map((m) => `<li class="${m.tone}">${esc(m.text)}</li>`).join('');
   return `<div class="map-stage">
@@ -70,7 +72,7 @@ export function mapView(g: GameState, ui: UI): string {
       ${g.fuel < 1 ? `<div class="notice bad">Out of fuel. ${g.level ? 'Race locally to earn cash, or ' : ''}call a fuel delivery to keep moving.</div>` : g.fuel <= 5 ? `<div class="notice warn">Low fuel: ${g.fuel} gal left. Towns with a shop and race venues sell fuel.</div>` : ''}
       ${actions}
       <ul class="log" aria-live="polite">${log}</ul>
-      <p class="hint muted small"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to move · tap the map to ride there · <kbd>Esc</kbd> menu · <button class="linkish" data-act="help">How to play</button></p>
+      <p class="hint muted small">Arrows move · tap the map to ride there · <kbd>Esc</kbd> menu · <kbd>C</kbd> career · <button class="linkish" data-act="help">How to play</button></p>
     </div>
   </div>`;
 }
