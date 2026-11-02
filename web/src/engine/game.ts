@@ -854,6 +854,38 @@ export function summarizeCart(state: GameState, data: GameData, cart: Cart): Car
   return { subtotal, tradeIn, total, canAfford: total <= state.money, empty };
 }
 
+/**
+ * A sensible cart for a rider who still needs parts: the best bike the budget allows (keeping money back
+ * for a tire, a few snacks and a toolkit), so the first shop visit is one tap. Null when nothing is missing.
+ */
+export function suggestBuild(state: GameState, data: GameData): Cart | null {
+  const p = state.player;
+  const cart = emptyCart();
+  const missing = PART_SLOTS.filter((s) => !p.parts[s] || p.parts[s]!.quality <= 0);
+  if (!missing.length) return null;
+  if (!p.tires.length) cart.tires = 1;
+  cart.snacks = Math.min(3, maxAdd(p, 'snacks'));
+  cart.toolkits = p.toolkits ? 0 : Math.min(1, maxAdd(p, 'toolkits'));
+  const total = () => summarizeCart(state, data, cart).total;
+  const reserve = Math.max(0, state.money * 0.08); // a little left for entry fees and fuel
+  const budget = state.money - reserve;
+  for (const slot of missing) cart.parts[slot] = data.shop.parts[slot].length - 1; // cheapest is last
+  // Trim extras if even the cheapest bike doesn't fit, then upgrade round-robin while it does.
+  while (total() > state.money && cart.snacks > 0) cart.snacks--;
+  while (total() > state.money && cart.toolkits > 0) cart.toolkits--;
+  for (let improved = true; improved; ) {
+    improved = false;
+    for (const slot of missing) {
+      const idx = cart.parts[slot]!;
+      if (idx === 0) continue;
+      cart.parts[slot] = idx - 1;
+      if (total() > budget) cart.parts[slot] = idx;
+      else improved = true;
+    }
+  }
+  return total() <= state.money ? cart : null;
+}
+
 export function checkout(state: GameState, data: GameData, cart: Cart): boolean {
   const sum = summarizeCart(state, data, cart);
   if (!sum.canAfford || sum.empty) return false;

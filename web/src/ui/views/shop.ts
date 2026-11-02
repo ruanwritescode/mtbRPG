@@ -84,14 +84,20 @@ export function shopModal(g: GameState, ui: UI): string {
     ? `<div class="notice warn"><span><b>Short on cash?</b> You need ${money(shortfall)} more to get race-ready. A sponsor can cover it, then they drop you.</span><button class="btn plain small" data-act="sponsor">Call a sponsor (${g.sponsors} left)</button></div>`
     : '';
   const after = g.money - total.total;
+  const suggested = total.empty ? G.suggestBuild(g, data) : null;
+  const suggestedTotal = suggested ? G.summarizeCart(g, data, suggested).total : 0;
+  const suggest = suggested
+    ? `<div class="suggest"><b>New here?</b> Let the shop pick a bike that fits your budget, with a tire and a few supplies.<button class="btn primary small" data-act="suggest">${icon('bolt', 14)} Suggested build · ${money(suggestedTotal)}</button></div>`
+    : '';
   return `<div class="modal-backdrop"><div class="modal shop-modal" role="dialog" aria-modal="true" aria-labelledby="shop-title">
     <header class="shop-top">${icon('shop', 22)}<div><h2 id="shop-title">${esc(shopName ?? 'Bike shop')}</h2><span class="muted small">${lvl ? 'Real-world prices. Better parts ride better.' : 'Welcome! Build a bike and stock up.'}</span></div><span class="spacer"></span><span class="chip">${icon('cash', 14)} ${money(g.money)}</span><button class="btn ghost small iconbtn" data-act="leave" aria-label="Close shop">${icon('close', 18)}</button></header>
     ${sponsor}
     <div class="shop-grid">
       <nav class="shop-cats" aria-label="Departments">${nav}</nav>
       <section class="shop-items">${items}</section>
-      <aside class="shop-cart"><h3>Cart</h3>
-        <ul class="clines">${lines.join('') || '<li class="muted small">Your cart is empty. Add parts or supplies.</li>'}</ul>
+      <aside class="shop-cart ${ui.cartOpen ? 'open' : ''}"><h3>Cart ${lines.length ? `<button class="linkish cart-toggle" data-act="cart-toggle">${lines.length} item${lines.length > 1 ? 's' : ''} ${ui.cartOpen ? '▴' : '▾'}</button>` : ''}</h3>
+        ${suggest}
+        <ul class="clines">${lines.join('') || (suggest ? '' : '<li class="muted small">Your cart is empty. Add parts or supplies.</li>')}</ul>
         <dl class="totals"><dt>Items</dt><dd>${money(total.subtotal)}</dd>
         ${total.tradeIn ? `<dt>Old parts sold</dt><dd class="good">−${money(total.tradeIn)}</dd>` : ''}
         <dt class="total">Total</dt><dd class="total">${money(total.total)}</dd>

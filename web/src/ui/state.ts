@@ -25,4 +25,6 @@ export interface UI {
   /** Kit colour and name being chosen on the name screen. */
   nameKit: number;
   nameDraft: string;
+  /** Phone shop: whether the cart's item list is expanded. */
+  cartOpen: boolean;
 }

@@ -76,6 +76,7 @@ export class App {
     muted: sfx.muted,
     nameKit: 0,
     nameDraft: '',
+    cartOpen: false,
   };
 
   constructor(root: HTMLElement) {
@@ -432,6 +433,16 @@ export class App {
       case 'checkout':
         this.checkout();
         return;
+      case 'cart-toggle':
+        this.ui.cartOpen = !this.ui.cartOpen;
+        this.render();
+        return;
+      case 'suggest': {
+        const cart = G.suggestBuild(this.g, data);
+        if (cart) this.ui.cart = cart;
+        this.render();
+        return;
+      }
       case 'leave':
         this.leaveShop();
         return;

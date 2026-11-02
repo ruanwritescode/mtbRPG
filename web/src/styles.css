@@ -320,7 +320,11 @@ input:focus { outline: 3px solid var(--brand-soft); border-color: var(--brand); 
 .stepper .btn.small { width: 32px; padding: 6px 0; }
 .stepper output { min-width: 1.6em; text-align: center; font-weight: 900; font-size: 16px; }
 .shop-cart { border-left: 2px solid var(--line); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; background: #fbfaf7; overflow-y: auto; }
-.shop-cart h3 { margin: 0; font-size: 15px; }
+.shop-cart h3 { margin: 0; font-size: 15px; display: flex; justify-content: space-between; align-items: baseline; }
+.cart-toggle { display: none; font-size: 12px; }
+.suggest { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 2px dashed var(--brand); border-radius: 12px; background: var(--brand-soft); font-size: 13px; color: var(--ink-soft); }
+.suggest b { color: var(--ink); }
+.suggest .btn { width: 100%; }
 .clines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .cline { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
 .cline b { display: block; font-weight: 800; line-height: 1.2; }
@@ -553,7 +557,11 @@ input:focus { outline: 3px solid var(--brand-soft); border-color: var(--brand); 
   .shop-cats { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 8px; }
   .cat { flex: none; }
   .cat-l small { display: none; }
-  .shop-cart { border-left: 0; border-top: 1px solid var(--line); max-height: 42vh; }
+  .shop-cart { border-left: 0; border-top: 1px solid var(--line); max-height: 48vh; gap: 8px; }
+  .cart-toggle { display: inline; }
+  .shop-cart:not(.open) .clines:not(:empty) { display: none; }
+  .shop-cart .totals { padding-top: 6px; }
+  .shop-cart .totals dt:not(.total), .shop-cart .totals dd:not(.total) { display: none; }
   .pgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .map-stage { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .map-wrap { padding: 6px; }

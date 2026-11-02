@@ -369,3 +369,27 @@ describe('saves from older versions', () => {
     expect(G.rankOf(old)).toBeGreaterThan(1);
   });
 });
+
+describe('suggested build', () => {
+  it('fills a cart a rookie can afford, with a tire and supplies, and upgrades within budget', () => {
+    const s = G.createGame('A', data, seededRng(40));
+    const cart = G.suggestBuild(s, data)!;
+    expect(cart).toBeTruthy();
+    expect(Object.keys(cart.parts)).toHaveLength(4);
+    expect(cart.tires).toBe(1);
+    expect(cart.snacks).toBeGreaterThan(0);
+    const sum = G.summarizeCart(s, data, cart);
+    expect(sum.canAfford).toBe(true);
+    expect(sum.total).toBeGreaterThan(s.money * 0.6);
+    expect(G.checkout(s, data, cart)).toBe(true);
+    expect(G.raceBlocker(s.player)).toBeNull();
+    expect(G.suggestBuild(s, data)).toBeNull();
+    // Broke rider: still gets the cheapest bike if it fits, otherwise nothing.
+    const poor = G.createGame('B', data, seededRng(41));
+    poor.money = 5000;
+    const c2 = G.suggestBuild(poor, data)!;
+    expect(c2 && G.summarizeCart(poor, data, c2).canAfford).toBe(true);
+    poor.money = 100;
+    expect(G.suggestBuild(poor, data)).toBeNull();
+  });
+});
