@@ -22,7 +22,7 @@ export function riderAvatar(kit: number, size = 40, opts: AvatarOpts = {}): stri
   const shell = 'M28 44 C26 28 38 12 58 12 C78 12 88 28 87 48 L86 64 C85 72 80 76 72 77 L46 77 C36 76 30 70 29 62Z';
   const stripes = opts.rainbow
     ? `<clipPath id="${id}-c"><path d="${shell}"/></clipPath>
-       <g clip-path="url(#${id}-c)">${['#2F80ED', '#D2453B', '#16181A', '#F2B83C', '#2E9E4F'].map((c, i) => `<path d="M10 ${42 + i * 3} L95 ${28 + i * 3} L95 ${31 + i * 3} L10 ${45 + i * 3}Z" fill="${c}"/>`).join('')}</g>`
+       <g clip-path="url(#${id}-c)">${['#2F80ED', '#D2453B', '#16181A', '#F2B83C', '#2E9E4F'].map((c, i) => `<path d="M10 ${40 + i * 4.2} L95 ${22 + i * 4.2} L95 ${26.2 + i * 4.2} L10 ${44.2 + i * 4.2}Z" fill="${c}"/>`).join('')}</g>`
     : '';
   const aria = opts.label ? `role="img" aria-label="${opts.label}"` : 'aria-hidden="true"';
   return `<svg class="avatar-svg ${opts.cls ?? ''}" width="${size}" height="${size}" viewBox="0 0 100 100" ${aria}>

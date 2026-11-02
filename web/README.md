@@ -29,15 +29,26 @@ edits.
 | --- | --- |
 | `src/data.ts` | Imports the original text files (`?raw`) and parses them |
 | `src/engine/` | The rules, ported from the C++ (`game.ts`), with parsers, types and RNG. No DOM |
-| `src/ui/app.ts` | Screens, input (keyboard, mouse/tap, on-screen D-pad), modals and game flow |
-| `src/ui/mapSvg.ts` | Draws a zone map from its ASCII file, with smoothed coastlines |
+| `src/engine/rivals.ts` | The roster of rival riders, start lists, results tables and ranking points |
+| `src/engine/venues.ts` | Real-world race venues and bike-shop towns for each map |
+| `src/ui/app.ts` | Input (keyboard, mouse/tap, on-screen D-pad), modals and game flow |
+| `src/ui/views/` | One module per screen: HUD, map, shop, race, story screens, career sheet |
+| `src/ui/mapSvg.ts` | Draws a zone map from its ASCII file, with coastlines, hills, forests and venue labels |
 | `src/ui/pov.ts` | First-person trail scenes: the view over the bars, forking into one lane per line choice |
+| `src/ui/rider.ts` | The rider portrait (a full-face helmet in the kit colour) used for you and every rival |
 | `src/ui/art.ts` | SVG art: start gates, the frame drawing, title stickers and shared drawing helpers |
+| `src/ui/sound.ts` | Sound effects synthesised with the Web Audio API; mute is remembered |
+| `src/ui/fx.ts` | Confetti and number tweens |
 | `src/ui/save.ts` | Saves in `localStorage`: an autosave (Continue) plus named saves like the original |
 | `tests/bot.ts` | A simple bot that plays full seasons. It's used to check the game can be finished |
 
 ## Playing
 
+- **Your career:** you start as a Rookie ranked #33 of 33. Every race has a start list of rivals (a fixed
+  roster of 32 fictional riders, from club regulars to World Cup winners); where you finish among them
+  moves you up the world rankings. Levels have names (Rookie, Novice, Amateur, Sport, Expert, Semi-Pro,
+  Pro, World Cup, World Champion) and the career sheet (<kbd>C</kbd>) shows your stats, the rankings
+  and the races you've won.
 - **Map:** arrow keys or WASD move one step (or tap a cell to ride there). <kbd>Enter</kbd> enters a shop or
   race, <kbd>1</kbd> local race, <kbd>2</kbd> eat, <kbd>3</kbd> toolkit, <kbd>4</kbd> save, <kbd>5</kbd> fuel,
   <kbd>Esc</kbd> menu.
@@ -47,6 +58,11 @@ edits.
   <kbd>↑</kbd> <kbd>→</kbd> (or A/W/D, the number keys, or a tap on the trail or its tile). Which lane an option
   takes is set in `lanesFor()` in `src/ui/pov.ts`; a section added to `races/terrain.txt` gets a scene
   automatically, with lane features picked from each option's name or the stat it uses.
+- **Venues:** the flags on the map are real riding destinations (Northstar to Killington in the USA; Fort
+  William to Maribor in Europe, with Snowshoe and Val di Sole as the finals), and bike shops turn up in
+  real mountain-bike towns. World Cups are named after the venue you enter them at.
+- **Sound:** short synthesised effects for picks, splits, crashes, wins and level-ups. Toggle with the
+  speaker button, <kbd>M</kbd>, or from the menu; the setting is remembered.
 - **Fuel:** the van holds 30 gallons and every step burns one. Fill up at shops, race venues and finals
   (USA $4/gal, Europe $7/gal). Run dry on the open trail and you can call a fuel delivery (5 gallons at triple
   price) or enter a local race from where you're standing to earn fuel money.
@@ -102,6 +118,9 @@ The formulas follow the C++ code. These changes fix crashes, keep the game finis
   be reached.
 - **Club races.** Once every named race at your level is won, local "club" races stand in, so you can't get
   stuck without races to enter.
+- **Rivals and rankings.** The original raced against an abstract reference time. The reference time still
+  decides your placement; a results table is built around it so the podium always agrees, and rivals
+  bank ranking points from the races they share with you. Winning the World Championship puts you at #1.
 - **Fuel.** The map has a fuel tank, so you can't wander freely: plan stops at shops and races. Running dry
   with no money and no sponsors to pay for a delivery ends the season.
 - Racing with no tires no longer crashes the game, and a flat tire gets thrown away.

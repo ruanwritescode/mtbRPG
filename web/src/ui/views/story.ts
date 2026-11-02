@@ -51,7 +51,7 @@ export function nameView(ui: UI): string {
   return `<main class="center-screen"><form class="card narrow create" id="name-form">
     <div class="create-top">${riderAvatar(ui.nameKit, 120, { label: 'Your rider' })}<div><h2>Create your rider</h2><p class="muted">Pick a name and a kit. You start as a rookie, ranked last of ${RIVALS.length + 1}.</p></div></div>
     <label class="field-label" for="name">Rider name</label>
-    <input id="name" name="name" maxlength="24" autocomplete="off" placeholder="e.g. Sam Rivers" required />
+    <input id="name" name="name" maxlength="24" autocomplete="off" placeholder="e.g. Sam Rivers" value="${esc(ui.nameDraft)}" required />
     <div class="field-label">Kit colour <span class="muted">· ${KITS[ui.nameKit].name}</span></div>
     <div class="swatches">${swatches}</div>
     <div class="row-actions"><button type="button" class="btn ghost" data-act="title">Back</button><button class="btn primary" type="submit">Let’s ride ${icon('chevron', 16)}</button></div>

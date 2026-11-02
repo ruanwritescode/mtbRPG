@@ -344,3 +344,28 @@ describe('rivals and venues', () => {
     expect(pick.race.venue).toBe(venue);
   });
 });
+
+describe('saves from older versions', () => {
+  it('fills in rankings, venues, kit and stats that an old save lacks', () => {
+    const rng = seededRng(30);
+    const s = G.createGame('Old', data, rng) as unknown as Record<string, unknown>;
+    delete s.standings;
+    delete s.trophies;
+    delete s.fuel;
+    const old = s as unknown as ReturnType<typeof G.createGame>;
+    delete old.player.kit;
+    for (const map of Object.values(old.maps)) {
+      delete map.names;
+      delete map.regions;
+      delete map.towns;
+      map.shops.push({ x: map.player.x, y: map.player.y });
+    }
+    G.normalize(old, rng);
+    expect(old.fuel).toBe(G.FUEL_TANK);
+    expect(old.player.kit).toBe(0);
+    expect(Object.keys(old.standings!).length).toBeGreaterThan(20);
+    expect(G.placeName(old.maps.usa, old.maps.usa.final)).toBe('Snowshoe');
+    expect(G.placeName(old.maps.usa, old.maps.usa.shops[0])).toMatch(/\w+ /);
+    expect(G.rankOf(old)).toBeGreaterThan(1);
+  });
+});

@@ -20,3 +20,21 @@ describe('race scenes', () => {
     expect(lanesFor(right)[right.options.findIndex((o) => /inside/i.test(o.label))]).toBe('right');
   });
 });
+
+import { fmtTime } from '../src/ui/views/race';
+import { riderAvatar, flagEmoji } from '../src/ui/rider';
+
+describe('race presentation', () => {
+  it('formats finishing times as m:ss.mmm', () => {
+    expect(fmtTime(235123)).toBe('3:55.123');
+    expect(fmtTime(600000)).toBe('10:00.000');
+    expect(fmtTime(59999)).toBe('0:59.999');
+  });
+
+  it('draws a portrait for every kit and a flag for a country', () => {
+    for (let k = 0; k < 8; k++) expect(riderAvatar(k, 40)).toContain('<svg');
+    expect(riderAvatar(0, 40, { rainbow: true })).toContain('clipPath');
+    expect(flagEmoji('NZ')).toBe('🇳🇿');
+    expect(flagEmoji()).toBe('');
+  });
+});

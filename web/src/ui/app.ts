@@ -71,6 +71,7 @@ export class App {
     flash: null,
     muted: sfx.muted,
     nameKit: 0,
+    nameDraft: '',
   };
 
   constructor(root: HTMLElement) {
@@ -279,12 +280,14 @@ export class App {
       }
       case 'new':
         this.ui.nameKit = Math.floor(Math.random() * KITS.length);
+        this.ui.nameDraft = '';
         this.screen = 'name';
         this.close();
         this.render();
         queueMicrotask(() => this.root.querySelector<HTMLInputElement>('#name')?.focus());
         return;
       case 'kit':
+        this.ui.nameDraft = this.root.querySelector<HTMLInputElement>('#name')?.value ?? this.ui.nameDraft;
         this.ui.nameKit = Number(ds.i);
         this.render();
         return;

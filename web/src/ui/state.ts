@@ -22,6 +22,7 @@ export interface UI {
   /** The section just ridden, shown for a moment before the next one. */
   flash: { outcome: SectionOutcome; feature: number } | null;
   muted: boolean;
-  /** Kit colour being chosen on the name screen. */
+  /** Kit colour and name being chosen on the name screen. */
   nameKit: number;
+  nameDraft: string;
 }
