@@ -43,7 +43,7 @@ Left Hand Corner
 Right Hand Corner  
  
 1. Corner Inside        (Skill)
-2. Corner Oustie    (Lose Time)
+2. Corner Outside   (Lose Time)
   
 ≤,2,skill,time
               /""""""""""""""7"7      

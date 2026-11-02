@@ -1,0 +1,8 @@
+{
+  "name": "mtbrpg",
+  "private": true,
+  "description": "Builds the web version (web/) for Cloudflare. The C++ game builds with make.",
+  "scripts": {
+    "build": "npm --prefix web ci && npm --prefix web run build"
+  }
+}
