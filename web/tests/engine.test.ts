@@ -170,7 +170,7 @@ describe('game rules', () => {
     let guard = 0;
     while (session.status === 'running' && guard++ < 50) G.rideSection(s, data, session, 1, rng);
     expect(['finished', 'crash', 'flat', 'broken']).toContain(session.status);
-    const res = G.settleRace(s, session);
+    const res = G.settleRace(s, session, rng);
     expect(s.activeRace).toBeUndefined();
     if (res.placement) {
       expect(s.level).toBe(1);
@@ -185,7 +185,7 @@ describe('game rules', () => {
     s.player.points = 50;
     const session = G.startRace(s, data, 'local', { race: G.makeRace('X', 1, rng), index: -1 }, rng);
     session.status = 'quit';
-    G.settleRace(s, session);
+    G.settleRace(s, session, rng);
     expect(s.player.points).toBe(30);
   });
 });
@@ -277,8 +277,70 @@ describe('full season', () => {
     const done = results.filter((r) => r.done);
     // Print a short summary for balancing.
     console.log(
-      results.map((r) => `${r.done ? 'WIN ' : 'STUCK'} races=${r.races} steps=${r.steps} lvl=${r.state.level} pts=${r.state.player.points} $${r.state.money} ${r.stuck ?? ''}`).join('\n'),
+      results.map((r) => `${r.done ? 'WIN ' : 'STUCK'} races=${r.races} steps=${r.steps} lvl=${r.state.level} rank=${G.rankOf(r.state)} pts=${r.state.player.points} $${r.state.money} ${r.stuck ?? ''}`).join('\n'),
     );
     expect(done.length).toBeGreaterThanOrEqual(6);
+  });
+});
+
+describe('rivals and venues', () => {
+  it('names every race flag and the final, and shops as they are found', () => {
+    const rng = seededRng(21);
+    const s = G.createGame('A', data, rng);
+    const map = s.maps.usa;
+    for (const p of map.races) expect(G.placeName(map, p)).toBeTruthy();
+    expect(G.placeName(map, map.final)).toBe('Snowshoe');
+    expect(G.placeName(s.maps.europe, s.maps.europe.final)).toBe('Val di Sole');
+    expect(new Set(map.races.map((p) => G.placeName(map, p))).size).toBe(map.races.length);
+  });
+
+  it('builds a results table that agrees with the placement', () => {
+    const rng = seededRng(5);
+    const s = G.createGame('Demi', data, rng);
+    s.player.points = 1000;
+    const session = G.startRace(s, data, 'local', { race: { ...G.makeRace('Test', 3, rng) }, index: -1 }, rng);
+    expect(session.field!.length).toBeGreaterThan(3);
+    session.status = 'finished';
+    session.gap = 1500; // ahead: a win
+    const win = G.settleRace(s, session, rng);
+    expect(win.placement).toBe(1);
+    expect(win.position).toBe(1);
+    expect(win.rows[0].id).toBeNull();
+    expect(win.rows.length).toBe(session.field!.length + 1);
+    for (let i = 1; i < win.rows.length; i++) expect(win.rows[i].time!).toBeGreaterThanOrEqual(win.rows[i - 1].time!);
+    expect(s.trophies).toHaveLength(1);
+    // A loss well off the podium.
+    const s2 = G.createGame('Demi', data, seededRng(6));
+    const ses2 = G.startRace(s2, data, 'local', { race: G.makeRace('Test', 3, rng), index: -1 }, rng);
+    ses2.status = 'finished';
+    ses2.gap = -Math.trunc(ses2.race.time * 0.03);
+    const loss = G.settleRace(s2, ses2, rng);
+    expect(loss.placement).toBe(0);
+    expect(loss.position).toBeGreaterThan(3);
+    expect(loss.rows[loss.position - 1].id).toBeNull();
+    expect(loss.rows[0].time).toBe(ses2.race.time);
+  });
+
+  it('ranks a rookie last and a world cup winner near the top', () => {
+    const s = G.createGame('A', data, seededRng(3));
+    expect(G.rankOf(s)).toBe(33);
+    s.player.points = 5000;
+    expect(G.rankOf(s)).toBe(1);
+    expect(G.standingsTable(s)[0].id).toBeNull();
+    expect(G.tierName(0)).toBe('Rookie');
+    expect(G.tierName(8)).toBe('World Champion');
+  });
+
+  it('runs the World Cup that matches the venue you are standing at', () => {
+    const rng = seededRng(8);
+    const s = G.createGame('A', data, rng);
+    s.phase = 'europe';
+    s.level = 6;
+    const map = s.maps.europe;
+    map.player = { ...map.races[0] };
+    const venue = G.placeName(map, map.player)!;
+    const pick = G.pickRace(s, 'map', rng)!;
+    expect(pick.race.name).toBe(`World Cup ${venue}`);
+    expect(pick.race.venue).toBe(venue);
   });
 });

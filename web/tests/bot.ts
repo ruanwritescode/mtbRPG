@@ -142,7 +142,7 @@ export function playSeason(rng: Rng, maxSteps = 20000): BotRun {
     if (G.tireIsLow(state.player, s.race)) G.swapTire(state.player);
     s.status = 'running';
     while (s.status === 'running') G.rideSection(state, data, s, chooseLine(state, s.feature, s.race.level), rng);
-    const res = G.settleRace(state, s);
+    const res = G.settleRace(state, s, rng);
     log.push(`L${s.race.level} ${kind} ${s.status} p=${res.placement} gap=${s.gap} fee=${s.race.entryFee} prize=${res.prize} $=${state.money} hp=${G.bikeHealth(state.player)} st=${state.player.strength}/${state.player.skill}/${state.player.endurance}/${state.player.mental}`);
     return res.placement !== null && res.placement > 0;
   };

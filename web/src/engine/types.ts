@@ -48,6 +48,8 @@ export interface Racer {
   snacks: number;
   /** Crashes caused by riding beyond your ability. MAX_INJURIES ends the career. */
   injuries: number;
+  /** Kit colour (index into KITS). */
+  kit?: number;
 }
 
 export type Zone = 'usa' | 'europe';
@@ -69,6 +71,12 @@ export interface MapState {
   maxShops: number;
   /** Cells the rider has been to, as "x,y". */
   visited: string[];
+  /** Venue or town name for a race, final or shop cell, keyed "x,y". */
+  names?: Record<string, string>;
+  /** Region line for venues, keyed like `names`. */
+  regions?: Record<string, string>;
+  /** Towns still unused for new shops, in order. */
+  towns?: string[];
 }
 
 export interface RaceDef {
@@ -83,6 +91,9 @@ export interface RaceDef {
   time: number;
   /** A generated club race that never runs out. */
   club?: boolean;
+  /** Where it's held, when known. */
+  venue?: string;
+  region?: string;
 }
 
 export type RaceKind = 'map' | 'final' | 'local';
@@ -115,6 +126,8 @@ export interface RaceSession {
   splits: number[];
   status: RaceStatus;
   last?: SectionOutcome;
+  /** Rival ids lining up in this race. */
+  field?: string[];
 }
 
 export type Phase = 'usa' | 'europe' | 'champion' | 'gameover';
@@ -134,7 +147,11 @@ export interface GameState {
   maps: Record<Zone, MapState>;
   races: RaceDef[];
   activeRace?: RaceSession;
-  stats: { entered: number; wins: number; podiums: number };
+  stats: { entered: number; wins: number; podiums: number; dnfs?: number; earned?: number; bestRank?: number };
+  /** Ranking points of every rival (keyed by id); yours are player.points. */
+  standings?: Record<string, number>;
+  /** Races won (name and venue), newest last. */
+  trophies?: { name: string; venue?: string; level: number; kind: RaceKind }[];
   createdAt: number;
   savedAt?: number;
 }

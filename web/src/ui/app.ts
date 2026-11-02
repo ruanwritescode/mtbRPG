@@ -1,33 +1,27 @@
-// Screens, input and flow. Rules live in ../engine; this file only decides what to show and when.
+// Screens, input and flow. Rules live in ../engine; this file decides what to show and when, and the
+// views in ./views decide how it looks.
 import { gameData as data } from '../data';
 import { isLand } from '../engine/parse';
 import { mathRng as rng } from '../engine/rng';
 import * as G from '../engine/game';
-import {
-  ATTR_LABELS,
-  ATTR_NAMES,
-  PART_LABELS,
-  PART_SLOTS,
-  STAT_LABELS,
-  STAT_NAMES,
-  ZONE_LABELS,
-  type GameState,
-  type Attrs,
-  type PartSlot,
-  type Point,
-  type RaceKind,
-  type RaceSession,
-  type StatName,
-} from '../engine/types';
-import { itemIcon, levelBadge, signIcon, startScene, titleBackground, type ItemKind } from './art';
-import { LANE_GLYPH, LANE_KEY, lanesFor, povScene } from './pov';
+import { KITS } from '../engine/rivals';
+import { PART_LABELS, STAT_LABELS, ZONE_LABELS, type GameState, type PartSlot, type Point, type RaceKind, type RaceSession, type StatName } from '../engine/types';
+import { levelBadge, signIcon, type ItemKind } from './art';
 import { esc, money, ordinal, seconds } from './dom';
-import { cellFromEvent, mapSvg } from './mapSvg';
+import { confetti, countUp, shake } from './fx';
+import { cellFromEvent } from './mapSvg';
+import { LANE_KEY, lanesFor } from './pov';
+import { riderAvatar } from './rider';
 import * as Save from './save';
-import { partImage } from './partImages';
-
-type Screen = 'title' | 'load' | 'name' | 'story' | 'map' | 'shop' | 'race' | 'europe' | 'victory' | 'gameover';
-type Tone = 'info' | 'good' | 'bad';
+import { sfx } from './sound';
+import type { Screen, Tone, UI } from './state';
+import { icon } from './widgets';
+import { careerBody } from './views/career';
+import { hudView } from './views/hud';
+import { mapView } from './views/map';
+import { raceView } from './views/race';
+import { shopModal } from './views/shop';
+import { endView, europeView, loadView, nameView, storyView, titleView } from './views/story';
 
 interface ModalAction {
   label: string;
@@ -41,32 +35,43 @@ interface Modal {
   /** Run on Escape / backdrop; omitted means the modal can't be dismissed that way. */
   cancel?: () => void;
   wide?: boolean;
+  /** Extra class, e.g. a celebration. */
+  cls?: string;
 }
 
 const SPONSOR_NAMES = ['Dirt Bag Coffee', 'Loam Ranger Tires', 'Hometown Bike Co.'];
+const FLASH_MS = 950;
+
+/** The first part slot that's missing or broken, if any. */
+function firstMissingSlot(p: GameState['player']): PartSlot | undefined {
+  return (['frame', 'suspension', 'brakes', 'wheels'] as PartSlot[]).find((slot) => !p.parts[slot] || p.parts[slot]!.quality <= 0);
+}
 
 export class App {
   private root: HTMLElement;
-  private screen: Screen = 'title';
   private game: GameState | null = null;
-  private log: { text: string; tone: Tone }[] = [];
   private modal: Modal | null = null;
-  private cart: G.Cart = G.emptyCart();
-  private raceView: 'start' | 'ride' | 'result' = 'start';
-  private result: (G.RaceResult & { session: RaceSession }) | null = null;
-  private from: Point | null = null;
   private walkTimer: number | null = null;
-  private walkPath: Point[] = [];
   private toast: string | null = null;
   private toastTimer: number | null = null;
   private firstShop = false;
-  /** Whether the stat meters are expanded; collapsed by default on phones so the map stays in view. */
   private picking = false;
-  private metersOpen = !window.matchMedia?.('(max-width: 820px)').matches;
-  private shopCat: ItemKind | 'supplies' = 'frame';
-  /** Phone layout: the map is a zoomed camera on the rider unless the full map is toggled on. */
-  private mobile = !!window.matchMedia?.('(max-width: 820px)').matches;
-  private fullMap = false;
+  private ui: UI = {
+    screen: 'title',
+    cart: G.emptyCart(),
+    raceView: 'start',
+    result: null,
+    mobile: !!window.matchMedia?.('(max-width: 820px)').matches,
+    fullMap: false,
+    metersOpen: !window.matchMedia?.('(max-width: 820px)').matches,
+    shopCat: 'frame',
+    log: [],
+    walkPath: [],
+    from: null,
+    flash: null,
+    muted: sfx.muted,
+    nameKit: 0,
+  };
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -76,15 +81,15 @@ export class App {
       'toggle',
       (e) => {
         const el = e.target as HTMLDetailsElement;
-        if (el.dataset?.sec === 'meters') this.metersOpen = el.open;
+        if (el.dataset?.sec === 'meters') this.ui.metersOpen = el.open;
       },
       true,
     );
     window.addEventListener('keydown', (e) => this.onKey(e));
     window.addEventListener('resize', () => {
       const m = !!window.matchMedia?.('(max-width: 820px)').matches;
-      if (m !== this.mobile) {
-        this.mobile = m;
+      if (m !== this.ui.mobile) {
+        this.ui.mobile = m;
         this.render();
       }
     });
@@ -98,12 +103,19 @@ export class App {
     return this.game;
   }
 
-  private say(text: string, tone: Tone = 'info') {
-    this.log.unshift({ text, tone });
-    this.log.length = Math.min(this.log.length, 6);
+  private get screen(): Screen {
+    return this.ui.screen;
+  }
+  private set screen(s: Screen) {
+    this.ui.screen = s;
   }
 
-  private flash(text: string) {
+  private say(text: string, tone: Tone = 'info') {
+    this.ui.log.unshift({ text, tone });
+    this.ui.log.length = Math.min(this.ui.log.length, 6);
+  }
+
+  private flashToast(text: string) {
     this.toast = text;
     if (this.toastTimer) clearTimeout(this.toastTimer);
     this.toastTimer = window.setTimeout(() => {
@@ -115,7 +127,10 @@ export class App {
   /** Persist after every change and route to the end screens when the season is over. */
   private commit() {
     if (this.game) {
-      if (this.screen !== 'race' && G.checkGameOver(this.game, data)) this.screen = 'gameover';
+      if (this.screen !== 'race' && G.checkGameOver(this.game, data)) {
+        if (this.screen !== 'gameover') sfx.play('bad');
+        this.screen = 'gameover';
+      }
       Save.autosave(this.game);
     }
     this.render();
@@ -173,7 +188,9 @@ export class App {
     }
     const el = target.closest<HTMLElement>('[data-act]');
     if (!el || (el as HTMLButtonElement).disabled) return;
-    this.act(el.dataset.act!, el.dataset);
+    const act = el.dataset.act!;
+    if (act !== 'line' && act !== 'dpad' && act !== 'sound') sfx.play('tap');
+    this.act(act, el.dataset);
   }
 
   private onSubmit(e: SubmitEvent) {
@@ -182,7 +199,7 @@ export class App {
     if (form.id === 'name-form') {
       const name = (new FormData(form).get('name') as string).trim().slice(0, 24);
       if (!name) return;
-      this.newGame(name);
+      this.newGame(name, this.ui.nameKit);
     }
   }
 
@@ -215,24 +232,26 @@ export class App {
         } else if (keyNum >= 1 && keyNum <= 5) {
           this.act(['local', 'eat', 'repair', 'save', 'fuel'][keyNum - 1], {});
         } else if (k === 'Escape') this.act('menu', {});
+        else if (k === 'c' || k === 'C') this.act('career', {});
+        else if (k === 'm' || k === 'M') this.act('sound', {});
         break;
       }
       case 'shop':
         if (k === 'Escape') this.act('leave', {});
         break;
       case 'race':
-        if (this.raceView === 'start' && (k === 'Enter' || k === ' ')) {
+        if (this.ui.raceView === 'start' && (k === 'Enter' || k === ' ')) {
           e.preventDefault();
           this.act('drop-in', {});
-        } else if (this.raceView === 'ride' && k !== 'Escape') {
+        } else if (this.ui.raceView === 'ride' && k !== 'Escape') {
           const feat = data.terrain[this.g.activeRace!.feature];
           let n = keyNum;
           if (!n && LANE_KEY[k]) n = lanesFor(feat).indexOf(LANE_KEY[k]) + 1;
           if (!n && (k === 'Enter' || k === ' ') && feat.options.length === 1) n = 1;
           if (LANE_KEY[k] || k === ' ') e.preventDefault();
           if (n >= 1 && n <= feat.options.length) this.act('line', { n: String(n) });
-        } else if (this.raceView === 'ride' && k === 'Escape') this.act('quit-race', {});
-        else if (this.raceView === 'result' && (k === 'Enter' || k === ' ')) {
+        } else if (this.ui.raceView === 'ride' && k === 'Escape') this.act('quit-race', {});
+        else if (this.ui.raceView === 'result' && (k === 'Enter' || k === ' ')) {
           e.preventDefault();
           this.act('race-done', {});
         }
@@ -249,15 +268,25 @@ export class App {
       case 'modal':
         this.modal?.actions[Number(ds.i)]?.run();
         return;
+      case 'sound':
+        this.ui.muted = sfx.toggle();
+        this.render();
+        return;
       case 'continue': {
         const s = Save.loadAutosave();
         if (s) this.resume(s);
         return;
       }
       case 'new':
+        this.ui.nameKit = Math.floor(Math.random() * KITS.length);
         this.screen = 'name';
+        this.close();
         this.render();
         queueMicrotask(() => this.root.querySelector<HTMLInputElement>('#name')?.focus());
+        return;
+      case 'kit':
+        this.ui.nameKit = Number(ds.i);
+        this.render();
         return;
       case 'load':
         this.screen = 'load';
@@ -282,6 +311,9 @@ export class App {
         return;
       case 'help':
         this.showHelp();
+        return;
+      case 'career':
+        this.showCareer();
         return;
       case 'to-shop':
         this.firstShop = true;
@@ -309,7 +341,7 @@ export class App {
         this.save();
         return;
       case 'fullmap':
-        this.fullMap = !this.fullMap;
+        this.ui.fullMap = !this.ui.fullMap;
         this.render();
         return;
       case 'dpad':
@@ -318,29 +350,29 @@ export class App {
         return;
       // shop
       case 'cat':
-        this.shopCat = ds.cat as ItemKind | 'supplies';
+        this.ui.shopCat = ds.cat as ItemKind | 'supplies';
         this.render();
-        queueMicrotask(() => this.root.querySelector<HTMLElement>(`[data-act="cat"][data-cat="${this.shopCat}"]`)?.focus());
+        queueMicrotask(() => this.root.querySelector<HTMLElement>(`[data-act="cat"][data-cat="${this.ui.shopCat}"]`)?.focus());
         return;
       case 'uncart': {
         const k = ds.k as ItemKind;
-        if (k === 'tires' || k === 'snacks' || k === 'toolkits') this.cart[k] = 0;
-        else delete this.cart.parts[k];
+        if (k === 'tires' || k === 'snacks' || k === 'toolkits') this.ui.cart[k] = 0;
+        else delete this.ui.cart.parts[k];
         this.render();
         return;
       }
       case 'part': {
         const slot = ds.slot as PartSlot;
         const i = Number(ds.i);
-        if (this.cart.parts[slot] === i) delete this.cart.parts[slot];
-        else this.cart.parts[slot] = i;
+        if (this.ui.cart.parts[slot] === i) delete this.ui.cart.parts[slot];
+        else this.ui.cart.parts[slot] = i;
         this.render();
         return;
       }
       case 'qty': {
         const what = ds.what as G.Consumable;
-        const next = this.cart[what] + Number(ds.d);
-        this.cart[what] = Math.max(0, Math.min(next, G.maxAdd(this.g.player, what)));
+        const next = this.ui.cart[what] + Number(ds.d);
+        this.ui.cart[what] = Math.max(0, Math.min(next, G.maxAdd(this.g.player, what)));
         this.render();
         return;
       }
@@ -356,7 +388,8 @@ export class App {
       // race
       case 'drop-in':
         this.g.activeRace!.status = 'running';
-        this.raceView = 'ride';
+        this.ui.raceView = 'ride';
+        sfx.play('start');
         this.commit();
         return;
       case 'line':
@@ -380,8 +413,9 @@ export class App {
         return;
       case 'fly':
         this.screen = 'map';
-        this.log = [];
+        this.ui.log = [];
         this.say('Welcome to Europe! The World Cup circuit awaits.', 'good');
+        sfx.play('open');
         this.commit();
         return;
     }
@@ -389,26 +423,29 @@ export class App {
 
   // ------------------------------------------------------------ flow
 
-  private newGame(name: string) {
-    this.game = G.createGame(name, data, rng);
-    this.log = [];
+  private newGame(name: string, kit: number) {
+    this.game = G.createGame(name, data, rng, kit);
+    this.ui.log = [];
     this.screen = 'story';
+    sfx.play('open');
     this.commit();
   }
 
   private resume(s: GameState) {
-    if (typeof s.fuel !== 'number') s.fuel = G.FUEL_TANK; // saves from before fuel existed
+    G.normalize(s, rng);
     this.game = s;
-    this.log = [];
-    this.cart = G.emptyCart();
+    this.ui.log = [];
+    this.ui.cart = G.emptyCart();
+    this.ui.flash = null;
+    this.close();
     if (s.phase === 'champion') this.screen = 'victory';
     else if (s.phase === 'gameover') this.screen = 'gameover';
     else if (s.activeRace) {
       this.screen = 'race';
-      this.raceView = s.activeRace.status === 'start' ? 'start' : 'ride';
+      this.ui.raceView = s.activeRace.status === 'start' ? 'start' : 'ride';
     } else {
       this.screen = 'map';
-      this.say(`Welcome back, ${s.player.name}.`);
+      this.say(`Welcome back, ${s.player.name}. ${G.tierName(s.level)}, ranked #${G.rankOf(s)}.`);
     }
     this.commit();
   }
@@ -419,15 +456,19 @@ export class App {
     const r = G.move(this.g, data, dir, rng);
     if (r.noFuel) {
       this.say(this.g.level ? 'Out of fuel. Race locally for cash (1) or call a fuel delivery (5).' : 'Out of fuel. Call a fuel delivery (5) to keep going.', 'bad');
+      sfx.play('bad');
       this.render();
       return false;
     }
     if (!r.moved) return false;
     if (this.g.fuel === 5) this.say('Fuel is running low. Fill up at a town or a race venue.', 'bad');
-    this.from = before;
-    if (r.shopFound) this.say('There’s a bike shop in this town!', 'good');
+    this.ui.from = before;
+    if (r.shopFound) {
+      this.say(`You found ${G.placeName(map, map.player) ?? 'a bike shop'} — a town with a bike shop and fuel!`, 'good');
+      sfx.play('open');
+    }
     this.commit();
-    this.from = null;
+    this.ui.from = null;
     return true;
   }
 
@@ -452,14 +493,14 @@ export class App {
     if (!prev.has(G.key(goal))) return;
     const path: Point[] = [];
     for (let p: Point | null = goal; p && G.key(p) !== G.key(start); p = prev.get(G.key(p)) ?? null) path.unshift(p);
-    this.walkPath = path;
+    this.ui.walkPath = path;
     const tick = () => {
-      const next = this.walkPath.shift();
+      const next = this.ui.walkPath.shift();
       if (!next || this.screen !== 'map' || this.modal) return this.stopWalk();
       const cur = G.currentMap(this.g).player;
       const dir = (Object.keys(G.DIRS) as G.Direction[]).find((d) => cur.x + G.DIRS[d].x === next.x && cur.y + G.DIRS[d].y === next.y);
       if (!dir || !this.step(dir)) return this.stopWalk();
-      if (G.locationOf(this.g) !== 'open' || !this.walkPath.length) return this.stopWalk();
+      if (G.locationOf(this.g) !== 'open' || !this.ui.walkPath.length) return this.stopWalk();
       this.walkTimer = window.setTimeout(tick, 120);
     };
     tick();
@@ -468,8 +509,8 @@ export class App {
   private stopWalk() {
     if (this.walkTimer) clearTimeout(this.walkTimer);
     this.walkTimer = null;
-    if (this.walkPath.length) {
-      this.walkPath = [];
+    if (this.ui.walkPath.length) {
+      this.ui.walkPath = [];
       this.render();
     }
   }
@@ -490,12 +531,13 @@ export class App {
       return this.render();
     }
     if (kind === 'final' && map.races.length) {
-      this.say(`Complete all other races on the map to enter the final (${map.races.length} left).`, 'bad');
+      this.say(`Win every other flag on the map to enter the final (${map.races.length} left).`, 'bad');
       return this.render();
     }
     const blocker = G.raceBlocker(g.player);
     if (blocker) {
       this.say(blocker, 'bad');
+      sfx.play('bad');
       return this.render();
     }
     const pick = G.pickRace(g, kind, rng);
@@ -505,10 +547,11 @@ export class App {
     }
     const r = pick.race;
     const debt = r.entryFee > g.money ? `<p class="warn">That’s more than you have — you’ll go into debt.</p>` : '';
+    const where = r.venue ? `<div class="muted small">${icon('pin', 13)} ${esc(r.venue)}${r.region ? `, ${esc(r.region)}` : ''}</div>` : '';
     this.confirm(
       esc(r.name),
-      `<div class="race-card"><div>${levelBadge(r.level)} <span class="muted">· ${r.length} sections</span></div>
-        <p>The entry fee is <b>${money(r.entryFee)}</b>. You have ${money(g.money)}.</p>${debt}
+      `<div class="race-card">${where}<div>${levelBadge(r.level)} <span class="muted">· ${r.length} sections · pace ${G.turningPoint(r.level)}</span></div>
+        <p>The entry fee is <b>${money(r.entryFee)}</b>. You have ${money(g.money)}. A win pays <b>${money(Math.trunc((r.level / 7) ** 2 * G.PRIZES[1]))}</b>.</p>${debt}
         ${kind === 'final' ? '<p>This is the final race of the region. Win or podium it to move on!</p>' : ''}</div>`,
       'Enter race',
       () => this.beginRace(kind, pick),
@@ -520,7 +563,8 @@ export class App {
     const g = this.g;
     const s = G.startRace(g, data, kind, pick, rng);
     this.screen = 'race';
-    this.raceView = 'start';
+    this.ui.raceView = 'start';
+    this.ui.flash = null;
     this.commit();
     if (G.tireIsLow(g.player, s.race)) {
       this.confirm(
@@ -536,48 +580,95 @@ export class App {
     }
   }
 
-  /** Light up the chosen lane and tile for a moment, then ride it. */
+  /** Light up the chosen lane, ride the section, show what happened, then move on. */
   private pickLine(n: number) {
     const s = this.g.activeRace;
-    if (this.picking || !s || s.status !== 'running') return;
+    if (this.picking || this.ui.flash || !s || s.status !== 'running') return;
     this.picking = true;
+    sfx.play('pick');
     this.root.querySelectorAll(`.race [data-act="line"][data-n="${n}"]`).forEach((el) => el.classList.add('picked'));
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const reduced = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     setTimeout(() => {
       this.picking = false;
-      this.rideLine(n);
-    }, reduced ? 0 : 200);
+      this.rideLine(n, reduced);
+    }, reduced ? 0 : 180);
   }
 
-  private rideLine(n: number) {
+  private rideLine(n: number, reduced = false) {
     const s = this.g.activeRace;
     if (!s || s.status !== 'running') return;
-    G.rideSection(this.g, data, s, n, rng);
-    if (s.status !== 'running') this.finishRace(s);
-    else this.commit();
+    const feature = s.feature;
+    const gapBefore = s.gap;
+    const out = G.rideSection(this.g, data, s, n, rng);
+    const d = out.gapAfter - out.gapBefore;
+    const status: string = s.status;
+    if (status === 'crash' || status === 'broken' || status === 'flat') sfx.play('crash');
+    else sfx.play(d >= 0 ? 'gain' : 'lose');
+    const finish = () => {
+      this.ui.flash = null;
+      if (s.status !== 'running') this.finishRace(s);
+      else {
+        this.commit();
+        countUp(this.root.querySelector('.split b'), gapBefore, s.gap, seconds, 500);
+      }
+    };
+    if (reduced) return finish();
+    this.ui.flash = { outcome: out, feature };
+    Save.autosave(this.g);
+    this.render();
+    if (s.status !== 'running') shake(this.root.querySelector('.scene'));
+    setTimeout(finish, FLASH_MS);
   }
 
   private finishRace(s: RaceSession) {
-    const res = G.settleRace(this.g, s);
-    this.result = { ...res, session: s };
-    this.raceView = 'result';
+    const res = G.settleRace(this.g, s, rng);
+    this.ui.result = { ...res, session: s };
+    this.ui.raceView = 'result';
+    if (res.placement === 1) {
+      sfx.play('win');
+      confetti();
+    } else if (res.placement) sfx.play('podium');
+    else if (res.placement === 0) sfx.play('lose');
     this.commit();
   }
 
   private afterRace() {
-    const res = this.result;
-    this.result = null;
+    const res = this.ui.result;
+    this.ui.result = null;
     if (!res) return;
     const g = this.g;
     const s = res.session;
-    if (res.placement) this.say(`${ordinal(res.placement)} at the ${s.race.name}: +${res.points} points, ${money(res.prize)}.`, 'good');
-    else if (res.placement === 0) this.say(`No podium at the ${s.race.name}. ${res.points} points.`, 'bad');
-    if (res.levelUp) this.say(`Level up! You’re now level ${g.level}.`, 'good');
+    if (res.placement) this.say(`${ordinal(res.position)} at the ${s.race.name}: +${res.points} points, ${money(res.prize)}.`, 'good');
+    else if (res.placement === 0) this.say(`${ordinal(res.position)} at the ${s.race.name}. ${res.points} points.`, 'bad');
+    if (res.rankAfter < res.rankBefore) this.say(`You moved up to #${res.rankAfter} in the world rankings.`, 'good');
     if (g.phase === 'gameover' || G.checkGameOver(g, data)) this.screen = 'gameover';
     else if (res.champion) this.screen = 'victory';
     else if (res.zoneComplete) this.screen = 'europe';
     else this.screen = 'map';
+    if (res.champion) {
+      sfx.play('levelup');
+      confetti({ count: 160, duration: 4000 });
+    }
     this.commit();
+    if (res.levelUp && !res.zoneComplete && !res.champion) this.celebrateLevel();
+  }
+
+  private celebrateLevel() {
+    const g = this.g;
+    const lvl = g.level;
+    sfx.play('levelup');
+    confetti({ count: 70 });
+    const unlock = lvl >= 6 ? 'Europe’s World Cup flags are next.' : `Level ${lvl + 1} flags open once you have ${G.requiredPoints(lvl)} points. The pace rises to ${G.turningPoint(lvl + 1)} and the prizes grow.`;
+    this.show({
+      title: `Level ${lvl} — ${G.tierName(lvl)}`,
+      cls: 'celebrate',
+      body: `<div class="level-up"><div class="avatar-wrap">${riderAvatar(g.player.kit ?? 0, 120)}${signIcon(lvl, 40)}</div><p>You moved up the career ladder. ${unlock}</p><p class="muted small">World rank #${G.rankOf(g)}.</p></div>`,
+      cancel: () => {
+        this.close();
+        this.render();
+      },
+      actions: [{ label: 'Keep climbing', kind: 'primary', run: () => (this.close(), this.render()) }],
+    });
   }
 
   private buyFuel() {
@@ -588,24 +679,37 @@ export class App {
       return this.render();
     }
     const r = G.refuel(g, !station);
-    if (!r) this.say(`You can’t afford fuel ($${G.fuelPrice(g, !station)}/gal). Race locally to earn some.`, 'bad');
-    else this.say(station ? `Filled up: ${r.gallons} gal for ${money(r.cost)}.` : `Fuel delivered: ${r.gallons} gal for ${money(r.cost)}.`, 'good');
+    if (!r) {
+      this.say(`You can’t afford fuel ($${G.fuelPrice(g, !station)}/gal). Race locally to earn some.`, 'bad');
+      sfx.play('bad');
+    } else {
+      this.say(station ? `Filled up: ${r.gallons} gal for ${money(r.cost)}.` : `Fuel delivered: ${r.gallons} gal for ${money(r.cost)}.`, 'good');
+      sfx.play('fuel');
+    }
     this.commit();
   }
 
   private eat() {
     const d = G.eat(this.g, rng);
-    if (!d) this.say('You’re out of snacks. Buy some at a bike shop.', 'bad');
-    else this.say(`Snack time! ${d.map((x) => `${STAT_LABELS[x.name as StatName]} +${x.after - x.before}`).join(', ')}.`, 'good');
+    if (!d) {
+      this.say('You’re out of snacks. Buy some at a bike shop.', 'bad');
+      sfx.play('bad');
+    } else {
+      this.say(`Snack time! ${d.map((x) => `${STAT_LABELS[x.name as StatName]} +${x.after - x.before}`).join(', ')}.`, 'good');
+      sfx.play('gain');
+    }
     this.commit();
   }
 
   private repair() {
     const d = G.repair(this.g, rng);
-    if (!d) this.say('You have no toolkits. Buy some at a bike shop.', 'bad');
-    else {
+    if (!d) {
+      this.say('You have no toolkits. Buy some at a bike shop.', 'bad');
+      sfx.play('bad');
+    } else {
       const fixed = d.filter((x) => x.after > x.before).map((x) => `${PART_LABELS[x.name as PartSlot]} +${x.after - x.before}`);
       this.say(fixed.length ? `Wrenched on the bike: ${fixed.join(', ')}.` : 'Spent a toolkit but nothing would budge.', fixed.length ? 'good' : 'bad');
+      sfx.play(fixed.length ? 'gain' : 'bad');
     }
     this.commit();
   }
@@ -613,8 +717,8 @@ export class App {
   private save() {
     const g = this.g;
     const doSave = () => {
-      if (Save.saveGame(g)) this.flash('Game saved');
-      else this.flash('Couldn’t save — browser storage is unavailable');
+      if (Save.saveGame(g)) this.flashToast('Game saved');
+      else this.flashToast('Couldn’t save — browser storage is unavailable');
       this.render();
     };
     if (Save.hasSave(g.player.name)) {
@@ -624,44 +728,46 @@ export class App {
 
   private openShop() {
     this.stopWalk();
-    this.cart = G.emptyCart();
-    const p = this.g.player;
-    this.shopCat = PART_SLOTS.find((slot) => !p.parts[slot] || p.parts[slot]!.quality <= 0) ?? (p.tires.length ? 'supplies' : 'tires');
-    if (this.shopCat === 'tires') this.shopCat = 'supplies';
+    this.ui.cart = G.emptyCart();
+    this.ui.shopCat = firstMissingSlot(this.g.player) ?? 'supplies';
     this.screen = 'shop';
+    sfx.play('open');
     this.render();
   }
 
   private checkout() {
     const g = this.g;
-    if (!G.checkout(g, data, this.cart)) {
-      this.flash('You can’t afford that cart');
+    if (!G.checkout(g, data, this.ui.cart)) {
+      this.flashToast('You can’t afford that cart');
+      sfx.play('bad');
       return this.render();
     }
     this.say('Purchase successful! Enjoy your new gear.', 'good');
-    this.flash('Order placed');
+    this.flashToast('Order placed');
+    sfx.play('cash');
     this.closeShop();
   }
 
   private closeShop() {
-    this.cart = G.emptyCart();
+    this.ui.cart = G.emptyCart();
     this.screen = 'map';
     if (this.firstShop) {
       this.firstShop = false;
-      this.log = [];
+      this.ui.log = [];
+      const blocked = G.raceBlocker(this.g.player);
       this.say(
-        G.raceBlocker(this.g.player)
-          ? 'Welcome to the USA! You still need a full bike and tires before you can race — keep an eye out for shops.'
-          : 'Welcome to the USA! Head to a flag to enter your first race.',
-        G.raceBlocker(this.g.player) ? 'bad' : 'good',
+        blocked
+          ? 'You still need a full bike and a tire before you can race — keep an eye out for shops as you explore.'
+          : 'Bike built! Head to a flag on the map to enter your first qualifier.',
+        blocked ? 'bad' : 'good',
       );
     }
     this.commit();
   }
 
   private leaveShop() {
-    const sum = G.summarizeCart(this.g, data, this.cart);
-    if (!sum.empty) this.confirm('Leave the shop?', 'Your cart will be emptied.', 'Leave', () => this.closeShop(), 'Stay');
+    const total = G.summarizeCart(this.g, data, this.ui.cart);
+    if (!total.empty) this.confirm('Leave the shop?', 'Your cart will be emptied.', 'Leave', () => this.closeShop(), 'Stay');
     else this.closeShop();
   }
 
@@ -677,6 +783,7 @@ export class App {
       () => {
         G.sponsorBailout(g, data);
         this.say(`${name} bailed you out with ${money(amount)} and dropped you.`, 'bad');
+        sfx.play('cash');
         this.commit();
       },
     );
@@ -686,17 +793,33 @@ export class App {
     const g = this.g;
     this.show({
       title: 'Paused',
-      body: `<p class="muted">${esc(g.player.name)} · Level ${g.level} · ${ZONE_LABELS[G.zoneOf(g)]}</p>`,
+      body: `<p class="muted">${esc(g.player.name)} · ${G.tierName(g.level)} · ${ZONE_LABELS[G.zoneOf(g)]} · Rank #${G.rankOf(g)}</p>`,
       cancel: () => {
         this.close();
         this.render();
       },
       actions: [
         { label: 'Resume', kind: 'primary', run: () => (this.close(), this.render()) },
+        { label: 'Career', kind: 'plain', run: () => this.showCareer() },
         { label: 'Save game', kind: 'plain', run: () => (this.close(), this.save()) },
         { label: 'How to play', kind: 'plain', run: () => this.showHelp() },
+        { label: sfx.muted ? 'Sound: off' : 'Sound: on', kind: 'plain', run: () => (this.act('sound', {}), this.showMenu()) },
         { label: 'Quit to title', kind: 'plain', run: () => this.act('title', {}) },
       ],
+    });
+  }
+
+  private showCareer() {
+    const back = () => {
+      this.close();
+      this.render();
+    };
+    this.show({
+      title: 'Career',
+      wide: true,
+      cancel: back,
+      body: careerBody(this.g),
+      actions: [{ label: 'Close', kind: 'primary', run: back }],
     });
   }
 
@@ -710,23 +833,24 @@ export class App {
       wide: true,
       cancel: back,
       body: `<div class="help">
-        <p>Race your way from local events to the World Championship in Val Di Sole, Italy.</p>
+        <p>You’re a rookie ranked last of 33. Climb the career ladder from local races to the World Cup, and win the World Championship in Val Di Sole, Italy.</p>
         <h4>Getting around</h4>
         <ul><li>Move with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the arrow keys, or tap a spot on the map to ride there.</li>
-        <li>Bike shops pop up as you explore new towns. Press <kbd>Enter</kbd> on one to go in.</li>
-        <li>Flags are qualifying races. Each one needs more points than the last; winning (or a podium) levels you up.</li>
-        <li>Win every flag to unlock the region’s final race (the checkered flag).</li>
+        <li>Bike shops pop up in towns as you explore. Press <kbd>Enter</kbd> on one to go in.</li>
+        <li>Flags are qualifying races at real venues. Each level needs more points than the last; a win or podium levels you up.</li>
+        <li>Win every flag to unlock the region’s final (the checkered flag).</li>
         <li><kbd>1</kbd> enters a local race anywhere, for points and prize money.</li>
         <li>Your van uses a gallon of fuel per step. Fill up (<kbd>5</kbd>) at towns with a bike shop or at race venues. Run dry and you can call a delivery at three times the price, or race locally to pay for it.</li></ul>
         <h4>Racing</h4>
-        <ul><li>Each section offers lines that use Strength, Skill or Endurance — or a safe line that just loses time.</li>
+        <ul><li>Every section is a fork in the trail. Pick a line with <kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd>: lines use Strength, Skill or Endurance, or play it safe and lose a little time.</li>
         <li>A stat above the race’s pace gains time, below it loses time. Using a stat tires it out.</li>
         <li>Riding a line your stats can’t handle risks a crash that <b>injures</b> you. Three injuries end your career.</li>
         <li>Bike health matters most: keep parts above 30% with toolkits (<kbd>3</kbd>). Snacks (<kbd>2</kbd>) restore your stats.</li>
         <li>Parts are rated out of five dots: <b>Speed</b> turns effort into time, <b>Durability</b> slows wear, <b>Playfulness</b> makes crashes less likely and helps on skill lines, <b>Lightness</b> tires you out less.</li>
         <li>Tires wear one tread per section. Run out mid-race and you flat.</li></ul>
-        <h4>Money and sponsors</h4>
-        <ul><li>Entry fees can put you in debt. If you’re broke and can’t race, one of your three sponsors can bail you out — once each.</li>
+        <h4>Rankings, money and sponsors</h4>
+        <ul><li>Every race has a start list of rivals. Finish ahead of them to climb the world rankings (<kbd>C</kbd> opens your career sheet).</li>
+        <li>Entry fees can put you in debt. If you’re broke and can’t race, one of your three sponsors can bail you out — once each.</li>
         <li>No money, no sponsors, no bike? That’s game over.</li></ul>
       </div>`,
       actions: [{ label: 'Got it', kind: 'primary', run: back }],
@@ -738,13 +862,13 @@ export class App {
   render() {
     let body: string;
     switch (this.screen) {
-      case 'title': body = this.titleView(); break;
-      case 'load': body = this.loadView(); break;
-      case 'name': body = this.nameView(); break;
-      case 'story': body = this.storyView(); break;
-      case 'europe': body = this.europeView(); break;
-      case 'victory': body = this.endView(true); break;
-      case 'gameover': body = this.endView(false); break;
+      case 'title': body = titleView(this.ui); break;
+      case 'load': body = loadView(); break;
+      case 'name': body = nameView(this.ui); break;
+      case 'story': body = storyView(this.g); break;
+      case 'europe': body = europeView(this.g); break;
+      case 'victory': body = endView(this.g, true); break;
+      case 'gameover': body = endView(this.g, false); break;
       default: body = this.gameView();
     }
     const focusAct = (document.activeElement as HTMLElement | null)?.dataset?.act;
@@ -762,466 +886,34 @@ export class App {
     const btns = m.actions
       .map((a, i) => `<button class="btn ${a.kind ?? 'plain'}" data-act="modal" data-i="${i}">${esc(a.label)}</button>`)
       .join('');
-    return `<div class="modal-backdrop"><div class="modal ${m.wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    return `<div class="modal-backdrop"><div class="modal ${m.wide ? 'wide' : ''} ${m.cls ?? ''}" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <h2 id="modal-title">${m.title}</h2><div class="modal-body">${m.body}</div><div class="modal-actions">${btns}</div></div></div>`;
   }
-
-  private titleView(): string {
-    const auto = Save.loadAutosave();
-    const saves = Save.listSaves();
-    const canContinue = auto && auto.phase !== 'gameover' && auto.phase !== 'champion';
-    const cont = canContinue
-      ? `<button class="btn primary duo" data-act="continue">Continue<span class="sub">${esc(auto.player.name)} · Level ${auto.level} · ${ZONE_LABELS[auto.phase === 'usa' ? 'usa' : 'europe']}</span></button>`
-      : '';
-    return `<main class="title-screen">
-      <div class="title-bg">${titleBackground()}</div>
-      <div class="title-content">
-        <h1 class="logo">mtb<span>RPG</span></h1>
-        <p class="tagline">Build a bike. Chase points. Race your way to the World Championship.</p>
-        <div class="menu">
-          ${cont}
-          <button class="btn ${cont ? 'plain' : 'primary'} duo" data-act="new">${cont ? 'New season' : 'Start a new season'}</button>
-          ${saves.length ? `<button class="btn plain duo" data-act="load">Load game<span class="sub">${saves.length} save${saves.length > 1 ? 's' : ''}</span></button>` : ''}
-          <button class="btn ghost duo" data-act="help">How to play</button>
-        </div>
-      </div>
-      <footer class="credits">Based on the C++ terminal game by Ruan Abarbanel (2022) · Part of <a href="https://shreddi.bike">shreddi</a></footer>
-    </main>`;
-  }
-
-  private loadView(): string {
-    const rows = Save.listSaves().map((s) => `<li class="save-row">
-        <div><b>${esc(s.player.name)}</b><div class="muted small">Level ${s.level} · ${ZONE_LABELS[s.phase === 'usa' ? 'usa' : 'europe']} · ${s.player.points} pts · ${money(s.money)}${s.savedAt ? ` · ${new Date(s.savedAt).toLocaleDateString()}` : ''}</div></div>
-        <div class="row-actions"><button class="btn plain small" data-act="delete-slot" data-name="${esc(s.player.name)}">Delete</button>
-        <button class="btn primary small" data-act="load-slot" data-name="${esc(s.player.name)}">Load</button></div></li>`).join('');
-    return `<main class="center-screen"><div class="card narrow">
-      <h2>Load game</h2>
-      <ul class="saves">${rows || '<li class="muted">No saves yet.</li>'}</ul>
-      <button class="btn ghost" data-act="title">← Back</button></div></main>`;
-  }
-
-  private nameView(): string {
-    return `<main class="center-screen"><form class="card narrow" id="name-form">
-      <h2>Hi there, what is your name?</h2>
-      <input id="name" name="name" maxlength="24" autocomplete="off" placeholder="Rider name" required />
-      <div class="row-actions"><button type="button" class="btn ghost" data-act="title">Back</button><button class="btn primary" type="submit">Let’s ride</button></div>
-    </form></main>`;
-  }
-
-  private storyView(): string {
-    const g = this.g;
-    return `<main class="center-screen"><div class="card story">
-      <div class="trophy">🚵</div>
-      <h2>Hi ${esc(g.player.name)}!</h2>
-      <p>Race from local events to the World Championship in Val Di Sole.</p>
-      <p>Your <b>${G.START_SPONSORS} sponsors</b> put up <b>${money(g.money)}</b>. Build a bike and stock up: you need all four parts and a tire to race.</p>
-      <button class="btn primary big" data-act="to-shop">Go to the bike shop</button>
-    </div></main>`;
-  }
-
-  private europeView(): string {
-    return `<main class="center-screen"><div class="card story">
-      <div class="trophy">🏆</div>
-      <h2>WOW!</h2>
-      <p>You’ve climbed up the ladder and won the most competitive race the United States has to offer!</p>
-      <p>Now it’s time to really test your skills and go overseas. The European World Cup circuit is waiting.</p>
-      <button class="btn primary big" data-act="fly">Fly to Europe ✈</button>
-    </div></main>`;
-  }
-
-  private endView(won: boolean): string {
-    const g = this.g;
-    const stats = `<div class="end-stats">
-      <div><b>${g.stats.entered}</b><span>races</span></div><div><b>${g.stats.wins}</b><span>wins</span></div>
-      <div><b>${g.stats.podiums}</b><span>podiums</span></div><div><b>${g.player.points}</b><span>points</span></div></div>`;
-    if (won) {
-      return `<main class="center-screen"><div class="card story">
-        <div class="trophy">🌈</div><h2>World Champion!</h2>
-        <p>${esc(g.player.name)}, you won the Val Di Sole World Championship. Time to pull on the rainbow stripes.</p>
-        ${stats}<button class="btn primary big" data-act="new">Start a new season</button>
-        <button class="btn ghost" data-act="title">Title screen</button></div></main>`;
-    }
-    const why = g.gameOver === 'injury'
-      ? `<h2>Season over — injured</h2><p>Too many crashes from riding beyond your limits. ${esc(g.player.name)} is off the bike for the rest of the year.</p>`
-      : `<h2>Season over — broke</h2><p>No money, no sponsors and no way to get your bike race-ready. ${esc(g.player.name)} is hanging up the helmet for now.</p>`;
-    return `<main class="center-screen"><div class="card story gameover">
-      <div class="trophy">${g.gameOver === 'injury' ? '🩼' : '💸'}</div>${why}
-      ${stats}<button class="btn primary big" data-act="new">Try again</button>
-      <button class="btn ghost" data-act="title">Title screen</button></div></main>`;
-  }
-
-  // ------------------------------------------------------------ in-game layout
 
   private gameView(): string {
     const g = this.g;
     const zone = G.zoneOf(g);
     let stage = '';
     let paceLevel = g.level + 1;
-    if (this.screen === 'map' || this.screen === 'shop') stage = this.mapView();
+    if (this.screen === 'map' || this.screen === 'shop') stage = mapView(g, this.ui);
     else if (this.screen === 'race') {
-      stage = this.raceViewHtml();
-      paceLevel = g.activeRace?.race.level ?? this.result?.session.race.level ?? paceLevel;
+      stage = raceView(g, this.ui);
+      paceLevel = g.activeRace?.race.level ?? this.ui.result?.session.race.level ?? paceLevel;
     }
     return `<div class="game screen-${this.screen}">
       <header class="topbar">
         <button class="logo small" data-act="menu" aria-label="Menu">mtb<span>RPG</span></button>
         <span class="chip zone">${zone === 'usa' ? '🇺🇸' : '🇪🇺'} ${ZONE_LABELS[zone]}</span>
         <span class="spacer"></span>
-        <span class="chip stat-chip-top fuel-chip ${g.fuel <= 5 ? 'low' : ''}" title="Fuel">⛽ ${g.fuel}/${G.FUEL_TANK}</span>
-        <span class="chip stat-chip-top">⭐ ${g.player.points}</span>
-        <span class="chip stat-chip-top ${g.money < 0 ? 'neg' : ''}">💵 ${money(g.money)}</span>
-        <button class="btn ghost small" data-act="menu" aria-label="Open menu">☰ Menu</button>
+        <span class="chip top fuel-chip ${g.fuel <= 5 ? 'low' : ''}" title="Fuel">${icon('fuel', 15)} ${g.fuel}<small>/${G.FUEL_TANK}</small></span>
+        <span class="chip top" title="Ranking points">${icon('star', 15)} ${g.player.points.toLocaleString('en-US')}</span>
+        <span class="chip top ${g.money < 0 ? 'neg' : ''}" title="Money">${icon('cash', 15)} ${money(g.money)}</span>
+        <button class="btn ghost small iconbtn" data-act="sound" aria-label="${this.ui.muted ? 'Unmute' : 'Mute'} sound">${icon(this.ui.muted ? 'mute' : 'sound', 18)}</button>
+        <button class="btn ghost small" data-act="menu" aria-label="Open menu">${icon('menu', 18)} Menu</button>
       </header>
-      ${this.hudView(paceLevel)}
+      ${hudView(g, this.ui, paceLevel)}
       <section class="stage">${stage}</section>
-      ${this.screen === 'shop' ? this.shopModal() : ''}
+      ${this.screen === 'shop' ? shopModal(g, this.ui) : ''}
     </div>`;
-  }
-
-  private bar(value: number, max: number, cls = '', tick?: number): string {
-    const pct = Math.max(0, Math.min(100, (value / max) * 100));
-    const t = tick !== undefined ? `<i class="tick" style="left:${Math.min(100, (tick / max) * 100)}%"></i>` : '';
-    return `<div class="bar ${cls}"><span style="width:${pct}%"></span>${t}</div>`;
-  }
-
-  /** Five dots for a 1–10 rating, half dots for odd values. */
-  private dots(value: number, label?: string): string {
-    const v = Math.max(0, Math.min(10, Math.round(value)));
-    const pips = Array.from({ length: 5 }, (_, i) => `<i class="${v >= (i + 1) * 2 ? 'full' : v === i * 2 + 1 ? 'half' : ''}"></i>`).join('');
-    return `<span class="dots" role="img" aria-label="${label ? label + ' ' : ''}${v / 2} out of 5">${pips}</span>`;
-  }
-
-  /** Four rating blocks (label over five dots). */
-  private attrRows(a: Attrs, cls = ''): string {
-    return `<div class="attrs ${cls}">${ATTR_NAMES.map((k) => `<span><em>${ATTR_LABELS[k]}</em>${this.dots(a[k], ATTR_LABELS[k])}</span>`).join('')}</div>`;
-  }
-
-  /** A product photo when one exists, otherwise the drawn icon. */
-  private itemArt(kind: ItemKind, name: string, size: number): string {
-    const url = partImage(name);
-    return url ? `<img class="item-photo" src="${url}" width="${size}" height="${size}" alt="" loading="lazy" />` : itemIcon(kind, size);
-  }
-
-  private mini(label: string, value: string, pct: number, cls: string, tick?: number, sub?: string): string {
-    return `<div class="mini ${cls === 'none' ? 'missing' : ''}" ${sub ? `title="${sub}"` : ''}><div class="mt"><span>${label}</span><b>${value}</b></div>${this.bar(pct, 100, cls === 'none' ? '' : cls, tick)}</div>`;
-  }
-
-  private hudView(paceLevel: number): string {
-    const g = this.g;
-    const p = g.player;
-    const pace = G.turningPoint(paceLevel);
-    const stats = STAT_NAMES.map((s) => {
-      const v = p[s];
-      const cls = s === 'mental' ? (v < 40 ? 'bad' : v < 70 ? 'warn' : 'good') : v < pace ? 'bad' : v < pace + 10 ? 'warn' : 'good';
-      return this.mini(STAT_LABELS[s], String(v), (v / 102) * 100, cls, s === 'mental' ? undefined : (pace / 102) * 100);
-    }).join('');
-    const parts = PART_SLOTS.map((slot) => {
-      const part = p.parts[slot];
-      if (!part) return this.mini(PART_LABELS[slot], 'none', 0, 'none');
-      const cls = part.quality < 30 ? 'bad' : part.quality < 60 ? 'warn' : 'good';
-      return this.mini(PART_LABELS[slot], `${part.quality}<small>/${part.max}</small>`, part.quality, cls, undefined, esc(part.name));
-    }).join('');
-    const tire = p.tires.length
-      ? this.mini('Tire', `${p.tires[0]}<small>/${G.TIRE_LIFE}</small>`, (p.tires[0] / G.TIRE_LIFE) * 100, p.tires[0] < 6 ? 'bad' : p.tires[0] < 12 ? 'warn' : 'good')
-      : this.mini('Tire', 'none', 0, 'none');
-    const pips = (n: number, max: number, cls: string) =>
-      `<span class="pips ${cls}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
-    const req = G.requiredPoints(g.level);
-    const gate = g.phase === 'usa' || g.phase === 'europe'
-      ? (G.currentMap(g).races.length ? (p.points >= req ? 'qualified for next flag' : `${req} for next flag`) : 'final unlocked')
-      : '';
-    return `<section class="hud" aria-label="Rider">
-      <div class="hud-bar">
-        <div class="hud-id"><div class="avatar" aria-hidden="true">${esc(p.name.slice(0, 1).toUpperCase())}</div>
-          <div><div class="rider-name">${esc(p.name)}</div><div class="rider-sub">${g.level ? levelBadge(g.level) : '<span class="badge">Rookie</span>'}${gate ? `<span class="muted"> · ${gate}</span>` : ''}</div></div></div>
-        <div class="hud-kpi fuel"><span>Fuel</span>${this.bar(g.fuel, G.FUEL_TANK, g.fuel <= 5 ? 'bad' : g.fuel <= 12 ? 'warn' : 'good')}<small>${g.fuel}/${G.FUEL_TANK} gal · ${money(G.fuelPrice(g))}/gal</small></div>
-        <div class="hud-kpi"><span>Sponsors</span>${pips(g.sponsors, G.START_SPONSORS, 'sponsor')}<small>${g.sponsors} left</small></div>
-        <div class="hud-kpi"><span>Injuries</span>${pips(p.injuries, G.MAX_INJURIES, 'injury')}<small>${G.MAX_INJURIES - p.injuries} to go</small></div>
-        <div class="hud-ride" title="How your bike rides: the average of its four parts">${this.attrRows(G.bikeAttrs(p), 'compact')}</div>
-        <div class="hud-supply" title="Spare tires, snacks and toolkits">
-          <span>${this.itemArt('tires', 'Tire', 26)}<b>${Math.max(0, p.tires.length - 1)}</b></span>
-          <span>${this.itemArt('snacks', 'Snack', 26)}<b>${p.snacks}</b></span>
-          <span>${this.itemArt('toolkits', 'Toolkit', 26)}<b>${p.toolkits}</b></span>
-        </div>
-      </div>
-      <details class="hud-meters" data-sec="meters" ${this.metersOpen ? 'open' : ''}>
-        <summary>Rider &amp; bike <small class="muted">pace ${pace} · bike health ${G.bikeHealth(p)}</small></summary>
-        <div class="mgroups">
-          <div class="mgroup"><h5 title="Stats above the race pace gain time; below it they lose time">Rider <i class="tick-key"></i> pace ${pace}</h5><div class="minis">${stats}</div></div>
-          <div class="mgroup"><h5 title="Average part health above 30 gains time; a part at 0 breaks">Bike · hp ${G.bikeHealth(p)}</h5><div class="minis">${parts}${tire}</div></div>
-        </div>
-      </details>
-    </section>`;
-  }
-
-  private mapView(): string {
-    const g = this.g;
-    const zone = G.zoneOf(g);
-    const map = G.currentMap(g);
-    const t = data.maps[zone];
-    const loc = G.locationOf(g);
-    const req = G.requiredPoints(g.level);
-    const finalRace = data.raceList.find((r) => r.level === G.FINAL_LEVEL[zone]);
-    let here: string;
-    if (loc === 'shop') {
-      here = `<h3>🔧 Bike shop</h3><p>Parts, tires, snacks and toolkits, plus a fuel station.</p>
-        <button class="btn primary" data-act="interact">Visit shop <kbd>Enter</kbd></button>`;
-    } else if (loc === 'race') {
-      const ok = g.player.points >= req;
-      here = `<h3>${signIcon(g.level + 1, 16)} Level ${g.level + 1} qualifier</h3><p>${ok ? 'Win or podium here to level up.' : `You need <b>${req}</b> points to enter and have ${g.player.points}. Local races earn points.`}</p>
-        <button class="btn primary" data-act="interact" ${ok ? '' : 'disabled'}>Enter race <kbd>Enter</kbd></button>`;
-    } else if (loc === 'final') {
-      const open = map.races.length === 0;
-      here = `<h3>🏁 ${esc(finalRace?.name ?? 'Final race')}</h3><p>${open ? 'The final is open. Win or podium it to finish the region!' : `Complete all other races on the map to enter (${map.races.length} left).`}</p>
-        <button class="btn primary" data-act="interact" ${open ? '' : 'disabled'}>Enter the final <kbd>Enter</kbd></button>`;
-    } else {
-      here = g.level === 0
-        ? `<h3>Open trail</h3><p>Ride to a flag to enter your first qualifier. Tap the map or use the arrow keys.</p>`
-        : `<h3>Open trail</h3><p>Enter a local race for points and money, or keep exploring to find bike shops.</p>
-        <button class="btn primary" data-act="local" ${G.raceBlocker(g.player) ? 'disabled' : ''}>Enter a local race <kbd>1</kbd></button>`;
-    }
-    const blocker = G.raceBlocker(g.player);
-    const p = g.player;
-    const station = G.atFuelStation(g);
-    const need = G.fillUpGallons(g);
-    const fuelBtn = station
-      ? `<button class="btn plain" data-act="fuel" ${need ? '' : 'disabled'} title="Fuel station: ${money(G.fuelPrice(g))} a gallon"><kbd>5</kbd> Fill up <small>${need ? `${need} gal · ${money(need * G.fuelPrice(g))}` : 'full'}</small></button>`
-      : `<button class="btn plain" data-act="fuel" ${need ? '' : 'disabled'} title="Delivered anywhere at ${G.DELIVERY_MARKUP}× the price"><kbd>5</kbd> Fuel delivery <small>${G.DELIVERY_GALLONS} gal · ${money(Math.min(G.DELIVERY_GALLONS, need) * G.fuelPrice(g, true))}</small></button>`;
-    const actions = `<div class="actions">
-      ${g.level ? `<button class="btn plain" data-act="local" ${blocker ? 'disabled' : ''} title="A race you can enter anywhere, for points and prize money"><kbd>1</kbd> Local race</button>` : ''}
-      ${fuelBtn}
-      <button class="btn plain" data-act="eat" ${p.snacks ? '' : 'disabled'} title="Restores all four stats"><kbd>2</kbd> Eat a snack <small>${p.snacks} left</small></button>
-      <button class="btn plain" data-act="repair" ${p.toolkits ? '' : 'disabled'} title="Repairs every working part"><kbd>3</kbd> Use a toolkit <small>${p.toolkits} left</small></button>
-      <button class="btn plain" data-act="save"><kbd>4</kbd> Save game</button>
-    </div>`;
-    const log = this.log.map((m) => `<li class="${m.tone}">${esc(m.text)}</li>`).join('');
-    return `<div class="map-stage">
-      <div class="map-wrap">
-        ${mapSvg(t, map, { nextLevel: g.level + 1, finalOpen: map.races.length === 0, path: this.walkPath, from: this.from ?? undefined, camera: this.mobile && !this.fullMap ? { w: 30, h: 30 } : undefined })}
-        <button class="btn plain small map-toggle" data-act="fullmap">${this.fullMap ? 'Follow rider' : 'Full map'}</button>
-        <div class="dpad" aria-label="Move">
-          <button class="btn plain" data-act="dpad" data-dir="up" data-key="up" aria-label="Up">▲</button>
-          <button class="btn plain" data-act="dpad" data-dir="left" data-key="left" aria-label="Left">◀</button>
-          <button class="btn plain" data-act="dpad" data-dir="down" data-key="down" aria-label="Down">▼</button>
-          <button class="btn plain" data-act="dpad" data-dir="right" data-key="right" aria-label="Right">▶</button>
-        </div>
-        <div class="legend"><span><i class="lg you"></i>You</span><span>${signIcon(g.level + 1, 12)}Qualifier</span><span><i class="lg shop"></i>Shop · fuel</span><span>🏁 Final</span><span><i class="lg won"></i>Won</span><span><i class="lg trail"></i>Ridden</span></div>
-      </div>
-      <div class="panel">
-        <div class="here card">${here}</div>
-        ${blocker ? `<div class="notice bad">${esc(blocker)}</div>` : ''}
-        ${g.fuel < 1 ? `<div class="notice bad">Out of fuel. ${g.level ? 'Race locally to earn cash, or ' : ''}call a fuel delivery to keep moving.</div>` : g.fuel <= 5 ? `<div class="notice warn">Low fuel: ${g.fuel} gal left. Towns with a shop and race venues sell fuel.</div>` : ''}
-        ${actions}
-        <ul class="log" aria-live="polite">${log}</ul>
-        <p class="hint muted small"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows to move · tap the map to ride there · <kbd>Esc</kbd> menu · <button class="linkish" data-act="help">How to play</button></p>
-      </div>
-    </div>`;
-  }
-
-  private shopModal(): string {
-    const g = this.g;
-    const p = g.player;
-    const lvl = g.level;
-    const sum = G.summarizeCart(g, data, this.cart);
-    const cats: { key: ItemKind | 'supplies'; label: string; icon: ItemKind; note: string; need: boolean }[] = [
-      ...PART_SLOTS.map((slot) => {
-        const owned = p.parts[slot];
-        const need = !owned || owned.quality <= 0;
-        return { key: slot as ItemKind | 'supplies', label: PART_LABELS[slot], icon: slot as ItemKind, note: need ? 'needed' : this.cart.parts[slot] !== undefined ? 'in cart' : esc(owned!.name), need };
-      }),
-      { key: 'supplies', label: 'Supplies', icon: 'tires', note: !p.tires.length ? 'tires needed' : `${this.cart.tires + this.cart.snacks + this.cart.toolkits || ''}${this.cart.tires + this.cart.snacks + this.cart.toolkits ? ' in cart' : ''}`, need: !p.tires.length },
-    ];
-    const nav = cats.map((c) => `<button class="cat ${this.shopCat === c.key ? 'active' : ''}" data-act="cat" data-cat="${c.key}" aria-pressed="${this.shopCat === c.key}">${itemIcon(c.icon, 30)}<span class="cat-l">${c.label}<small class="${c.need ? 'need' : ''}">${c.note}</small></span></button>`).join('');
-
-    let items: string;
-    if (this.shopCat === 'supplies') {
-      items = (['tires', 'snacks', 'toolkits'] as G.Consumable[]).map((what) => {
-        const have = what === 'tires' ? p.tires.length : p[what];
-        const max = what === 'tires' ? G.MAX_TIRES : what === 'snacks' ? G.MAX_SNACKS : G.MAX_TOOLS;
-        const label = { tires: 'Tire', snacks: 'Trail snack', toolkits: 'Toolkit' }[what];
-        const note = { tires: `${G.TIRE_LIFE} sections of tread. Mounted one at a time.`, snacks: 'Restores all four stats a little.', toolkits: 'Repairs every working part a little.' }[what];
-        const left = G.maxAdd(p, what);
-        return `<div class="pcard ${this.cart[what] ? 'selected' : ''}">
-          <div class="pimg">${this.itemArt(what, label, 120)}</div>
-          <div class="name">${label}</div>
-          <div class="price">${money(G.priceAt(G.UNIT_PRICES[what], lvl))} <small>each</small></div>
-          <div class="sub">${note} You have ${have}/${max}.</div>
-          ${what === 'tires' && data.attrs['Tire'] ? this.attrRows(data.attrs['Tire'], 'stack') : ''}
-          <div class="stepper"><button class="btn plain small" data-act="qty" data-what="${what}" data-d="-1" data-key="${what}-" ${this.cart[what] ? '' : 'disabled'} aria-label="Fewer">−</button><output>${this.cart[what]}</output><button class="btn plain small" data-act="qty" data-what="${what}" data-d="1" data-key="${what}+" ${this.cart[what] < left ? '' : 'disabled'} aria-label="More">+</button></div>
-        </div>`;
-      }).join('');
-      items = `<div class="pgrid">${items}</div>`;
-    } else {
-      const slot = this.shopCat as PartSlot;
-      const owned = p.parts[slot];
-      items = data.shop.parts[slot].map((it, i) => {
-        const isOwned = owned?.name === it.name;
-        const inCart = this.cart.parts[slot] === i;
-        return `<div class="pcard ${inCart ? 'selected' : ''} ${isOwned ? 'owned' : ''}">
-          <div class="pimg">${this.itemArt(slot as ItemKind, it.name, 120)}</div>
-          <div class="name">${esc(it.name)}</div>
-          <div class="price">${money(G.priceAt(it.price, lvl))}${isOwned ? ' <small>on your bike</small>' : ''}</div>
-          ${it.attrs ? this.attrRows(it.attrs, 'stack') : ''}
-          <button class="btn ${inCart ? 'primary' : 'plain'} small" data-act="part" data-slot="${slot}" data-i="${i}" data-key="${slot}-${i}" ${isOwned ? 'disabled' : ''} aria-pressed="${inCart}">${isOwned ? 'Owned' : inCart ? '✓ In cart' : 'Add'}</button>
-        </div>`;
-      }).join('');
-      items = `<div class="pgrid">${items}</div>`;
-      if (owned && this.cart.parts[slot] !== undefined) {
-        const tradeIn = Math.trunc(owned.price * G.shopMultiplier(lvl) * owned.quality / 100);
-        items += `<p class="muted small">Your ${esc(owned.name)} sells on the used market for ${money(tradeIn)}, taken off the total.</p>`;
-      }
-    }
-
-    const lines: string[] = [];
-    for (const slot of PART_SLOTS) {
-      const i = this.cart.parts[slot];
-      if (i === undefined) continue;
-      const it = data.shop.parts[slot][i];
-      lines.push(`<li class="cline">${this.itemArt(slot as ItemKind, it.name, 34)}<span><b>${esc(it.name)}</b><small>${PART_LABELS[slot]}${p.parts[slot] ? ' · replaces ' + esc(p.parts[slot]!.name) : ''}</small></span><span class="cp">${money(G.priceAt(it.price, lvl))}<button class="linkish" data-act="uncart" data-k="${slot}" aria-label="Remove ${PART_LABELS[slot]}">Remove</button></span></li>`);
-    }
-    for (const what of ['tires', 'snacks', 'toolkits'] as G.Consumable[]) {
-      if (!this.cart[what]) continue;
-      lines.push(`<li class="cline">${this.itemArt(what, { tires: 'Tire', snacks: 'Snack', toolkits: 'Toolkit' }[what], 34)}<span><b>${this.cart[what]} × ${{ tires: 'Tire', snacks: 'Trail snack', toolkits: 'Toolkit' }[what]}</b><small>${money(G.priceAt(G.UNIT_PRICES[what], lvl))} each</small></span><span class="cp">${money(this.cart[what] * G.priceAt(G.UNIT_PRICES[what], lvl))}<button class="linkish" data-act="uncart" data-k="${what}" aria-label="Remove ${what}">Remove</button></span></li>`);
-    }
-    const shortfall = G.sponsorShortfall(g, data);
-    const sponsor = shortfall > 0 && g.sponsors > 0 && sum.empty
-      ? `<div class="notice warn"><span><b>Short on cash?</b> You need ${money(shortfall)} more to get race-ready. A sponsor can cover it, then they drop you.</span><button class="btn plain small" data-act="sponsor">Call a sponsor (${g.sponsors} left)</button></div>`
-      : '';
-    const after = g.money - sum.total;
-    return `<div class="modal-backdrop"><div class="modal shop-modal" role="dialog" aria-modal="true" aria-labelledby="shop-title">
-      <header class="shop-top"><h2 id="shop-title">Bike shop</h2><span class="muted small">${lvl ? 'Real-world prices. Better parts ride better.' : 'Welcome! Build a bike and stock up.'}</span><span class="spacer"></span><span class="chip">${money(g.money)}</span><button class="btn ghost small" data-act="leave" aria-label="Close shop">✕</button></header>
-      ${sponsor}
-      <div class="shop-grid">
-        <nav class="shop-cats" aria-label="Departments">${nav}</nav>
-        <section class="shop-items">${items}</section>
-        <aside class="shop-cart"><h3>Cart</h3>
-          <ul class="clines">${lines.join('') || '<li class="muted small">Your cart is empty. Add parts or supplies.</li>'}</ul>
-          <dl class="totals"><dt>Items</dt><dd>${money(sum.subtotal)}</dd>
-          ${sum.tradeIn ? `<dt>Old parts sold</dt><dd class="good">−${money(sum.tradeIn)}</dd>` : ''}
-          <dt class="total">Total</dt><dd class="total">${money(sum.total)}</dd>
-          <dt>Left after</dt><dd class="${after < 0 ? 'neg' : ''}">${money(after)}</dd></dl>
-          ${!sum.canAfford ? '<p class="warn small">Not enough money for this cart.</p>' : ''}
-          <button class="btn primary block" data-act="checkout" ${sum.empty || !sum.canAfford ? 'disabled' : ''}>${sum.empty ? 'Checkout' : `Checkout · ${money(sum.total)}`}</button>
-          <button class="btn ghost block small" data-act="leave">${sum.empty ? 'Leave shop' : 'Leave without buying'}</button>
-        </aside>
-      </div>
-    </div></div>`;
-  }
-
-  private raceViewHtml(): string {
-    const g = this.g;
-    if (this.raceView === 'result' && this.result) return this.resultView();
-    const s = g.activeRace;
-    if (!s) return '';
-    const r = s.race;
-    const head = `<div class="race-head">
-        <div><h2>${esc(r.name)}</h2><div class="muted race-meta">${levelBadge(r.level)} · ${r.length} sections${r.club ? ' · club race' : ''} · <span title="Stats above this gain time, below it lose time">pace ${G.turningPoint(r.level)}</span></div></div>
-        ${this.raceView === 'ride' ? `<div class="split ${s.gap > 0 ? 'ahead' : s.gap < 0 ? 'behind' : ''}"><span>Split</span><b>${seconds(s.gap)}</b></div>` : ''}
-      </div>`;
-    if (this.raceView === 'start') {
-      return `<div class="race">${head}
-        <div class="scene">${startScene(r.endcap) ?? `<pre class="ascii">${esc(data.starts[r.endcap] ?? '')}</pre>`}</div>
-        <div class="race-start"><p>Pick a line in each section. Stats above <b>${G.turningPoint(r.level)}</b> gain time, bike health above 30 gains time. Finish ahead to win.</p>
-        <button class="btn primary big" data-act="drop-in">Drop in <kbd>Enter</kbd></button></div></div>`;
-    }
-    const feat = data.terrain[s.feature];
-    const pace = G.turningPoint(r.level);
-    const p = g.player;
-    const lanes = lanesFor(feat);
-    const choices = feat.options.map((o, i) => {
-      const risk = G.crashRisk(p, o.modifier, r.level);
-      let chip = '';
-      if (o.modifier === 'strength' || o.modifier === 'skill' || o.modifier === 'endurance') {
-        const v = p[o.modifier];
-        chip = `<span class="stat-chip ${v >= pace ? 'good' : 'bad'}">${STAT_LABELS[o.modifier]} ${v} · ${v >= pace ? 'gains time' : 'loses time'}</span>`;
-      } else if (o.modifier === 'time') chip = '<span class="stat-chip neutral">Safe · loses 0.75s</span>';
-      else if (o.modifier === 'bike') chip = `<span class="stat-chip neutral">Bike health ${G.bikeHealth(p)} · wears every part</span>`;
-      const riskChip = risk > 0 ? `<span class="stat-chip risk">⚠ ${Math.round(risk * 100)}% injury risk</span>` : '';
-      const lane = lanes[i];
-      const key = lane ? `<kbd class="arrow" aria-label="${lane}">${LANE_GLYPH[lane]}</kbd>` : `<kbd>${i + 1}</kbd>`;
-      return `<button class="choice lane-${lane ?? 'extra'}" data-act="line" data-n="${i + 1}" data-key="line-${i + 1}"><span class="choice-head">${key}<span class="choice-label">${esc(o.label)}</span></span><span class="chips">${chip}${riskChip}</span></button>`;
-    }).join('');
-    const progress = `<div class="progress" aria-label="Section ${s.section + 1} of ${r.length}">${Array.from({ length: r.length }, (_, i) => {
-      const split = s.splits[i];
-      const cls = i < s.section ? (split > 0 ? 'ahead' : 'behind') : i === s.section ? 'now' : '';
-      return `<i class="${cls}"></i>`;
-    }).join('')}</div>`;
-    const keys = (['left', 'straight', 'right'] as const).filter((l) => lanes.includes(l)).map((l) => `<kbd>${LANE_GLYPH[l]}</kbd>`).join('');
-    const hint = feat.options.length > 1 ? `Pick a line with ${keys} or tap a trail` : `Press ${keys} to ride it out`;
-    return `<div class="race">${head}${progress}
-      <div class="scene">${povScene(feat, s.feature)}<div class="section-label">Section ${s.section + 1} / ${r.length} · ${esc(feat.title)}</div></div>
-      <div class="choices lanes">${choices}</div>
-      ${this.lastOutcome(s)}
-      <div class="race-foot"><span class="muted small">${hint}</span><button class="btn ghost small" data-act="quit-race">Quit race <kbd>Esc</kbd></button></div>
-    </div>`;
-  }
-
-  private lastOutcome(s: RaceSession): string {
-    const o = s.last;
-    if (!o) return '';
-    const feat = data.terrain[o.feature];
-    const d = o.gapAfter - o.gapBefore;
-    const bits = [`<span class="${d >= 0 ? 'good' : 'bad'}">${seconds(d)}</span>`];
-    if (o.stat) bits.push(`${STAT_LABELS[o.stat.name]} ${o.stat.before}→${o.stat.after}`);
-    for (const dm of o.damage) if (dm.after < dm.before) bits.push(`${PART_LABELS[dm.slot]} −${dm.before - dm.after}`);
-    bits.push(`Tread ${o.tireLife}`);
-    return `<div class="last"><b>Last section</b> ${esc(feat.title)} — ${esc(feat.options[o.choice - 1]?.label ?? '')} <span class="last-bits">${bits.join('<i>·</i>')}</span></div>`;
-  }
-
-  private resultView(): string {
-    const res = this.result!;
-    const s = res.session;
-    const g = this.g;
-    let title: string;
-    let text: string;
-    let icon: string;
-    if (s.status === 'quit') {
-      icon = '🏳️';
-      title = 'You pulled out';
-      text = `You quit the race and lost your entry fee and ${G.QUIT_PENALTY} points.`;
-    } else if (s.status === 'flat') {
-      icon = '🛞';
-      title = 'Flat tire!';
-      text = 'You got a flat! Make sure to put some fresh tires on next time.';
-    } else if (s.status === 'broken') {
-      icon = '🔩';
-      title = 'Your bike broke';
-      text = '#@%$! Your bike broke and you crashed! Get some new parts from a bike shop and try again.';
-    } else if (s.status === 'crash') {
-      icon = '💥';
-      title = s.last?.injury ? 'Crash — you’re injured' : 'You crashed!';
-      text = s.last?.injury
-        ? `You rode a line beyond your ability and went down hard. Injuries: ${g.player.injuries} of ${G.MAX_INJURIES}.${g.player.injuries >= G.MAX_INJURIES ? ' That’s the end of your season.' : ' Ride within your limits!'}`
-        : '#@%$! Bad luck on the trail. Heal up quick and get back out here.';
-    } else {
-      const pl = res.placement!;
-      icon = ['😤', '🥇', '🥈', '🥉'][pl];
-      title = pl ? `${ordinal(pl)} place!` : 'Off the podium';
-      text = pl === 1
-        ? `You won by ${(s.gap / 1000).toFixed(3)} seconds!`
-        : pl
-          ? `${(-s.gap / 1000).toFixed(3)} seconds back — still on the podium.`
-          : `You were ${(-s.gap / 1000).toFixed(3)} seconds back and didn’t podium this time.`;
-    }
-    const chips = s.status === 'finished' || s.status === 'quit'
-      ? `<div class="result-chips"><span class="${res.points >= 0 ? 'good' : 'bad'}">${res.points >= 0 ? '+' : ''}${res.points} points</span>${res.prize ? `<span class="good">+${money(res.prize)}</span>` : ''}${res.levelUp ? `<span class="good">Level ${g.level}!</span>` : ''}${res.zoneComplete ? '<span class="good">+1000 bonus points</span>' : ''}</div>`
-      : '<p class="muted">Entry fee lost. No points this time.</p>';
-    return `<div class="race result"><div class="card result-card">
-      <div class="result-icon">${icon}</div><h2>${title}</h2><p>${text}</p>${chips}
-      ${this.sparkline(s)}
-      <button class="btn primary big" data-act="race-done">Continue <kbd>Enter</kbd></button></div></div>`;
-  }
-
-  private sparkline(s: RaceSession): string {
-    if (s.splits.length < 2) return '';
-    const vals = [0, ...s.splits];
-    const max = Math.max(1, ...vals.map(Math.abs));
-    const w = 300;
-    const h = 70;
-    const pts = vals.map((v, i) => `${(i / (vals.length - 1)) * w},${h / 2 - (v / max) * (h / 2 - 4)}`).join(' ');
-    return `<figure class="spark"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Split gap per section">
-      <line x1="0" x2="${w}" y1="${h / 2}" y2="${h / 2}" stroke="var(--line)" stroke-width="1.5"/>
-      <polyline points="${pts}" fill="none" stroke="${s.gap >= 0 ? 'var(--good)' : 'var(--danger)'}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
-      <figcaption class="muted small">Your gap to the leader, section by section</figcaption></figure>`;
   }
 }

@@ -2,7 +2,9 @@
 // Numbers and formulas follow the original; places that crashed or contradicted the README are fixed
 // and marked "fix:".
 import { isLand, type GameData, type Terrain } from './parse';
+import { buildResults, KITS, pickField, rankingPoints, RIVALS, rivalById, startingPoints, type ResultRow } from './rivals';
 import type { Rng } from './rng';
+import { assignVenues, FINAL_VENUE, shopName, townOrder } from './venues';
 import {
   ATTR_NAMES,
   PART_SLOTS,
@@ -50,11 +52,18 @@ const MAX_RACES_ON_MAP = 5;
 /** Level of the race at each map's F. fix: Europe's final is the World Championship (level 8). */
 export const FINAL_LEVEL: Record<Zone, number> = { usa: 6, europe: 8 };
 
+/** What each level is called on the career ladder. */
+export const TIERS = ['Rookie', 'Novice', 'Amateur', 'Sport', 'Expert', 'Semi-Pro', 'Pro', 'World Cup', 'World Champion'];
+export function tierName(level: number): string {
+  return TIERS[Math.max(0, Math.min(TIERS.length - 1, level))];
+}
+
 // ---------------------------------------------------------------- creation
 
-export function newRacer(name: string, rng: Rng): Racer {
+export function newRacer(name: string, rng: Rng, kit = 0): Racer {
   return {
     name,
+    kit: Math.max(0, Math.min(KITS.length - 1, kit)),
     strength: 65 + rng.int(20),
     skill: 65 + rng.int(20),
     endurance: 65 + rng.int(20),
@@ -113,16 +122,50 @@ export function newMap(zone: Zone, terrain: Terrain, rng: Rng): MapState {
     won: [],
     maxShops: terrain.maxShops,
     visited: [key(terrain.start)],
+    names: {},
+    regions: {},
+    towns: townOrder(zone, rng),
   };
   spawnRaces(map, terrain, rng);
+  nameVenues(map, rng);
   return map;
 }
 
-export function createGame(name: string, data: GameData, rng: Rng): GameState {
+/** Gives every race flag and the final a real-world venue. */
+function nameVenues(map: MapState, rng: Rng) {
+  map.names ??= {};
+  map.regions ??= {};
+  map.towns ??= townOrder(map.zone, rng);
+  const unnamed = map.races.filter((p) => !map.names![key(p)]);
+  if (unnamed.length) {
+    const venues = assignVenues(map.zone, unnamed.map((p) => p.x), rng);
+    unnamed.forEach((p, i) => {
+      map.names![key(p)] = venues[i].name;
+      map.regions![key(p)] = venues[i].region;
+    });
+  }
+  const f = FINAL_VENUE[map.zone];
+  map.names[key(map.final)] = f.name;
+  map.regions[key(map.final)] = f.region;
+}
+
+/** The venue or town name of a map cell, if it has one. */
+export function placeName(map: MapState, p: Point): string | undefined {
+  return map.names?.[key(p)];
+}
+export function placeRegion(map: MapState, p: Point): string | undefined {
+  return map.regions?.[key(p)];
+}
+
+export function createGame(name: string, data: GameData, rng: Rng, kit = 0): GameState {
+  const standings: Record<string, number> = {};
+  for (const r of RIVALS) standings[r.id] = startingPoints(r);
   return {
     version: 1,
     phase: 'usa',
-    player: newRacer(name.trim() || 'Rider', rng),
+    player: newRacer(name.trim() || 'Rider', rng, kit),
+    standings,
+    trophies: [],
     level: 0,
     money: START_MONEY,
     sponsors: START_SPONSORS,
@@ -132,9 +175,46 @@ export function createGame(name: string, data: GameData, rng: Rng): GameState {
       europe: newMap('europe', data.maps.europe, rng),
     },
     races: data.raceList.map((r) => makeRace(r.name, r.level, rng)),
-    stats: { entered: 0, wins: 0, podiums: 0 },
+    stats: { entered: 0, wins: 0, podiums: 0, dnfs: 0, earned: 0, bestRank: RIVALS.length + 1 },
     createdAt: Date.now(),
   };
+}
+
+/** Fills in anything a save from an older version lacks, so old games keep working. */
+export function normalize(state: GameState, rng: Rng): GameState {
+  if (typeof state.fuel !== 'number') state.fuel = FUEL_TANK;
+  state.player.kit ??= 0;
+  state.stats.dnfs ??= 0;
+  state.stats.earned ??= 0;
+  state.stats.bestRank ??= RIVALS.length + 1;
+  state.trophies ??= [];
+  if (!state.standings) {
+    state.standings = {};
+    for (const r of RIVALS) state.standings[r.id] = startingPoints(r);
+  }
+  for (const map of Object.values(state.maps)) {
+    if (!map.names || !map.towns) {
+      nameVenues(map, rng);
+      map.shops.forEach((p, i) => {
+        if (!map.names![key(p)]) map.names![key(p)] = shopName(map.towns!.shift() ?? 'Trailhead', i);
+      });
+    }
+  }
+  return state;
+}
+
+/** Your place in the rankings: one more than the number of rivals with more points. */
+export function rankOf(state: GameState): number {
+  const pts = state.player.points;
+  return 1 + Object.values(state.standings ?? {}).filter((v) => v > pts).length;
+}
+
+/** The rankings table: every rider, best first. */
+export function standingsTable(state: GameState): { id: string | null; name: string; country?: string; kit: number; points: number; rank: number }[] {
+  const rows = RIVALS.map((r) => ({ id: r.id as string | null, name: r.name, country: r.country as string | undefined, kit: r.kit, points: state.standings?.[r.id] ?? startingPoints(r) }));
+  rows.push({ id: null, name: state.player.name, country: undefined, kit: state.player.kit ?? 0, points: state.player.points });
+  rows.sort((a, b) => b.points - a.points || (a.id === null ? -1 : 1));
+  return rows.map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
 // ---------------------------------------------------------------- map
@@ -228,6 +308,9 @@ export function move(
   if (rng.int(10) === 3 && map.shops.length < map.maxShops && isFreeSpace(map, t, nx, ny)) {
     if (isLand(t, nx + 1, ny) && isLand(t, nx - 1, ny) && isLand(t, nx, ny + 1) && isLand(t, nx, ny - 1)) {
       map.shops.push({ x: nx, y: ny });
+      map.names ??= {};
+      map.towns ??= townOrder(map.zone, rng);
+      map.names[key(map.player)] = shopName(map.towns.shift() ?? 'Trailhead', map.shops.length - 1);
       shopFound = true;
     }
   }
@@ -398,17 +481,26 @@ export interface RacePick {
 /** Chooses which race runs: the next level up on the map, the zone final, or any local race at or below your level. */
 export function pickRace(state: GameState, kind: RaceKind, rng: Rng): RacePick | null {
   const target = kind === 'map' ? state.level + 1 : kind === 'final' ? FINAL_LEVEL[zoneOf(state)] : state.level;
+  const map = currentMap(state);
+  const venue = kind === 'local' ? undefined : placeName(map, map.player);
+  const region = kind === 'local' ? undefined : placeRegion(map, map.player);
   const pool: number[] = [];
   state.races.forEach((r, i) => {
     if (kind === 'local' ? r.level <= state.level : r.level === target) pool.push(i);
   });
+  // A race at a venue carries its name; World Cups are simply named after where they're held.
+  const withVenue = (race: RaceDef): RaceDef => {
+    if (!venue) return race;
+    const name = /^world cup/i.test(race.name) && race.level < 8 ? `World Cup ${venue}` : race.name;
+    return { ...race, name, venue, region };
+  };
   if (pool.length) {
     const index = pool[rng.int(pool.length)];
-    return { race: state.races[index], index };
+    return { race: withVenue(state.races[index]), index };
   }
   if (target < 1) return null;
   // fix: once every named race is won the original could soft-lock; club races never run out.
-  return { race: clubRace(target, rng), index: -1 };
+  return { race: withVenue(clubRace(target, rng)), index: -1 };
 }
 
 export function startRace(state: GameState, data: GameData, kind: RaceKind, pick: RacePick, rng: Rng): RaceSession {
@@ -426,6 +518,7 @@ export function startRace(state: GameState, data: GameData, kind: RaceKind, pick
     gap: 0,
     splits: [],
     status: 'start',
+    field: pickField(pick.race.level, rng).map((r) => r.id),
   };
   state.activeRace = session;
   return session;
@@ -563,6 +656,13 @@ export interface RaceResult {
   levelUp: boolean;
   zoneComplete: boolean;
   champion: boolean;
+  /** The full finishing order, including you. */
+  rows: ResultRow[];
+  /** Your finishing position in that order (field size + 1 after a DNF). */
+  position: number;
+  /** Your world ranking before and after. */
+  rankBefore: number;
+  rankAfter: number;
 }
 
 export function placementFor(s: RaceSession): number {
@@ -579,7 +679,8 @@ export function addPoints(r: Racer, n: number) {
 }
 
 /** Pays out a finished (or abandoned) race and applies what it means for the map and the season. */
-export function settleRace(state: GameState, s: RaceSession): RaceResult {
+export function settleRace(state: GameState, s: RaceSession, rng: Rng): RaceResult {
+  const field = (s.field ?? []).map(rivalById).filter((r): r is NonNullable<typeof r> => !!r);
   const result: RaceResult = {
     placement: null,
     points: 0,
@@ -588,14 +689,33 @@ export function settleRace(state: GameState, s: RaceSession): RaceResult {
     levelUp: false,
     zoneComplete: false,
     champion: false,
+    rows: [],
+    position: field.length + 1,
+    rankBefore: rankOf(state),
+    rankAfter: rankOf(state),
   };
   state.activeRace = undefined;
+  const finishRows = (placement: number | null) => {
+    result.rows = buildResults(s, placement, state.player.name, field, rng);
+    result.position = result.rows.find((r) => r.id === null)?.position ?? field.length + 1;
+    // Rivals bank ranking points for where they finished.
+    state.standings ??= {};
+    for (const row of result.rows) {
+      if (row.id && row.time !== null) state.standings[row.id] = (state.standings[row.id] ?? 0) + rankingPoints(row.position, s.race.level);
+    }
+  };
   if (s.status === 'quit') {
     addPoints(state.player, -QUIT_PENALTY);
     result.points = -QUIT_PENALTY;
+    state.stats.dnfs = (state.stats.dnfs ?? 0) + 1;
+    finishRows(null);
+    result.rankAfter = rankOf(state);
     return result;
   }
   if (s.status !== 'finished') {
+    state.stats.dnfs = (state.stats.dnfs ?? 0) + 1;
+    finishRows(null);
+    result.rankAfter = rankOf(state);
     checkGameOver(state);
     return result;
   }
@@ -607,7 +727,13 @@ export function settleRace(state: GameState, s: RaceSession): RaceResult {
   result.prize = Math.trunc(level * level * PRIZES[placement]);
   addPoints(state.player, result.points);
   state.money += result.prize;
-  if (placement === 1) state.stats.wins++;
+  state.stats.earned = (state.stats.earned ?? 0) + result.prize;
+  finishRows(placement);
+  if (placement === 1) {
+    state.stats.wins++;
+    state.trophies ??= [];
+    state.trophies.push({ name: s.race.name, venue: s.race.venue, level: s.race.level, kind: s.kind });
+  }
   if (placement > 0) {
     state.stats.podiums++;
     if (s.raceIndex >= 0) state.races.splice(s.raceIndex, 1);
@@ -630,9 +756,14 @@ export function settleRace(state: GameState, s: RaceSession): RaceResult {
       } else {
         state.phase = 'champion';
         result.champion = true;
+        // The rainbow jersey puts you at the top of the rankings, whatever the arithmetic says.
+        const top = Math.max(0, ...Object.values(state.standings ?? {}));
+        if (state.player.points <= top) state.player.points = top + 1;
       }
     }
   }
+  result.rankAfter = rankOf(state);
+  state.stats.bestRank = Math.min(state.stats.bestRank ?? Infinity, result.rankAfter);
   return result;
 }
 
